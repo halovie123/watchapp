@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.widget.Button;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+
 import java.util.Random;
 
 public class OxygenActivity extends AppCompatActivity {
@@ -13,6 +14,7 @@ public class OxygenActivity extends AppCompatActivity {
     private boolean isMeasuring = false;
     private Handler handler;
     private Random random;
+    private HealthDataManager dataManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +28,7 @@ public class OxygenActivity extends AppCompatActivity {
 
         handler = new Handler();
         random = new Random();
+        dataManager = HealthDataManager.getInstance(this);
 
         btnMeasure.setOnClickListener(v -> {
             if (!isMeasuring) {
@@ -60,6 +63,9 @@ public class OxygenActivity extends AppCompatActivity {
                 if (isMeasuring) {
                     int oxygenLevel = 95 + random.nextInt(6); // 95-100%
                     tvOxygenLevel.setText(oxygenLevel + "%");
+
+                    // Lưu dữ liệu vào HealthDataManager
+                    dataManager.saveOxygenData(oxygenLevel);
 
                     if (oxygenLevel < 95) {
                         tvStatus.setText("Nồng độ oxy thấp");

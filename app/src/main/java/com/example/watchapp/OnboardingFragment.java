@@ -45,12 +45,12 @@ public class OnboardingFragment extends Fragment {
                 description.setText("Discover the fusion of tech and style with our smartwatches.");
                 break;
             case 1:
-                imageView.setImageResource(R.drawable.watch_image);
+                imageView.setImageResource(R.drawable._watch);
                 title.setText("Track Your Health");
                 description.setText("Monitor your heart rate and oxygen levels in real-time.");
                 break;
             case 2:
-                imageView.setImageResource(R.drawable.watch_image);
+                imageView.setImageResource(R.drawable.heartrate);
                 title.setText("Stay Safe");
                 description.setText("Fall detection alerts to keep you protected.");
                 break;

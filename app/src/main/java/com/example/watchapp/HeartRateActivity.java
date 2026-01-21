@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.widget.Button;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+
 import java.util.Random;
 
 public class HeartRateActivity extends AppCompatActivity implements SensorEventListener {
@@ -19,6 +20,7 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
     private boolean isMeasuring = false;
     private Handler handler;
     private Random random;
+    private HealthDataManager dataManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +36,7 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
         heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
         handler = new Handler();
         random = new Random();
+        dataManager = HealthDataManager.getInstance(this);
 
         btnMeasure.setOnClickListener(v -> {
             if (!isMeasuring) {
@@ -76,6 +79,9 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
                     int heartRate = 60 + random.nextInt(40); // 60-100 BPM
                     tvHeartRate.setText(heartRate + " BPM");
 
+                    // Lưu dữ liệu vào HealthDataManager
+                    dataManager.saveHeartRateData(heartRate);
+
                     if (heartRate < 60) {
                         tvStatus.setText("Nhịp tim thấp");
                     } else if (heartRate > 100) {
@@ -95,6 +101,9 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
         if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
             float heartRate = event.values[0];
             tvHeartRate.setText((int)heartRate + " BPM");
+
+            // Lưu dữ liệu vào HealthDataManager
+            dataManager.saveHeartRateData((int)heartRate);
 
             if (heartRate < 60) {
                 tvStatus.setText("Nhịp tim thấp");

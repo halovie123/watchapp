@@ -16,8 +16,6 @@
             android:id="@+id/btnBackToOnboarding"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentStart="true"
             android:background="@drawable/button_round"
             android:text="←"
             android:textSize="24sp"
@@ -43,8 +41,8 @@
                 android:id="@+id/tvBatteryStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hãy kiểm tra trạng thái đồng hồ của bạn..."
-                android:textAlignment="gravity"
+                android:text="Đã kết nối với đồng hồ của bạn..."
+                android:textAlignment="center"
                 android:textColor="@color/gray"
                 android:textSize="13sp" />
 
@@ -54,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:text="16:20"
                 android:textColor="@color/black"
-                android:textSize="18dp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -66,7 +64,7 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <!-- Title Galaxy Watch Active2 -->
+        <!-- Title -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -77,6 +75,136 @@
             android:textColor="@color/black"
             android:textSize="20sp"
             android:textStyle="bold" />
+
+        <!-- Biểu đồ nhịp tim 24h -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardHeartRateChart"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_heart"
+                        android:contentDescription="Heart Icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Nhịp tim 24h"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvHeartRateAvg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="-- BPM"
+                        android:textColor="@color/red"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.example.watchapp.ChartView
+                    android:id="@+id/heartRateChartView"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/chart_background" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Trung bình: 72-78 BPM"
+                    android:textColor="@color/gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Biểu đồ nồng độ oxy 24h -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardOxygenChart"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_oxygen"
+                        android:contentDescription="Oxygen Icon" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Nồng độ oxy 24h"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvOxygenAvg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--%"
+                        android:textColor="@color/blue"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.example.watchapp.ChartView
+                    android:id="@+id/oxygenChartView"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/chart_background" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Trung bình: 96-99%"
+                    android:textColor="@color/gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- Menu Items -->
         <androidx.cardview.widget.CardView

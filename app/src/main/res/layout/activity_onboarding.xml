@@ -40,8 +40,8 @@
     <!-- TabLayout (for navigation) -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="50dp"
+        android:layout_height="20dp"
         android:layout_above="@id/btnGetStarted"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="30dp"
