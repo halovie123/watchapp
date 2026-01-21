@@ -17,8 +17,9 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="@drawable/button_round"
-            android:text="←"
+            android:text="🏠"
             android:textSize="24sp"
+            android:textStyle="bold"
             android:textColor="@color/black" />
 
         <!-- Header với đồng hồ -->

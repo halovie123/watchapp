@@ -75,12 +75,14 @@ public class ChartView extends View {
 
         int width = getWidth();
         int height = getHeight();
+        int paddingLeft = 60;
         int padding = 20;
 
         // Vẽ lưới ngang
         for (int i = 0; i <= 4; i++) {
             float y = padding + (height - 2 * padding) * i / 4f;
-            canvas.drawLine(padding, y, width - padding, y, gridPaint);
+            canvas.drawLine(paddingLeft, y, width - padding, y, gridPaint);
+
         }
 
         // Vẽ biểu đồ
@@ -91,7 +93,9 @@ public class ChartView extends View {
                 HealthDataManager.HealthDataPoint point = dataPoints.get(i);
 
                 // Tính toán vị trí x, y
-                float x = padding + (width - 2 * padding) * i / (float)(dataPoints.size() - 1);
+                float x = paddingLeft + (width - paddingLeft - padding)
+                        * i / (float)(dataPoints.size() - 1);
+
                 float normalizedValue = (point.value - minValue) / (float)(maxValue - minValue);
                 float y = height - padding - (height - 2 * padding) * normalizedValue;
 
@@ -112,10 +116,22 @@ public class ChartView extends View {
         // Vẽ giá trị min/max
         Paint labelPaint = new Paint();
         labelPaint.setColor(0xFF666666);
-        labelPaint.setTextSize(24f);
+        labelPaint.setTextSize(22f);
         labelPaint.setTextAlign(Paint.Align.RIGHT);
 
-        canvas.drawText(String.valueOf(maxValue), padding - 5, padding + 10, labelPaint);
-        canvas.drawText(String.valueOf(minValue), padding - 5, height - padding + 10, labelPaint);
+        canvas.drawText(
+                String.valueOf(maxValue),
+                paddingLeft - 8,
+                padding + 18,
+                labelPaint
+        );
+
+        canvas.drawText(
+                String.valueOf(minValue),
+                paddingLeft - 8,
+                height - padding + 18,
+                labelPaint
+        );
+
     }
 }
