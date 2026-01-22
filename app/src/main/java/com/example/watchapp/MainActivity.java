@@ -154,7 +154,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
 
         cardAdvanced.setOnClickListener(v -> {
-            Toast.makeText(this, "Cài đặt nâng cao", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(MainActivity.this, AdvancedSettingsActivity.class));
         });
     }
 
