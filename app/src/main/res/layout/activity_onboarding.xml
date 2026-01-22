@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="40dp"
-        android:text="3 con gián"
+        android:text="3 CHÚ GIÁN"
         android:textAlignment="center"
         android:textColor="@color/black"
         android:textSize="18sp"
