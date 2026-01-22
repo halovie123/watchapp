@@ -2,13 +2,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.watchapp">
 
+    <!-- Quyền cảm biến -->
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <uses-feature android:name="android.hardware.sensor.heartrate" />
-    <uses-feature android:name="android.hardware.sensor.accelerometer" />
+    <!-- Quyền Bluetooth cho Android 12+ (API 31+) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Quyền vị trí (cần cho BLE scan trên Android < 12) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Tính năng phần cứng -->
+    <uses-feature android:name="android.hardware.sensor.heartrate" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -18,6 +32,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Onboarding Activity (Main Launcher) -->
         <activity
             android:name=".OnboardingActivity"
             android:exported="true"
@@ -28,25 +43,43 @@
             </intent-filter>
         </activity>
 
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <!-- BLE Scan Activity -->
+        <activity
+            android:name=".BLEScanActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:label="Quét thiết bị BLE" />
+
+        <!-- Heart Rate Activity -->
         <activity
             android:name=".HeartRateActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <!-- Oxygen Activity -->
         <activity
             android:name=".OxygenActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <!-- Advanced Settings Activity -->
         <activity
             android:name=".AdvancedSettingsActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
+
+        <!-- BLE Service -->
+        <service
+            android:name=".BLEService"
+            android:enabled="true"
+            android:exported="false" />
+
     </application>
 
 </manifest>
