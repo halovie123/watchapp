@@ -1,7 +1,6 @@
 package com.example.watchapp;
 
 import android.Manifest;
-import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -15,25 +14,18 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import org.json.JSONException;
-import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -42,7 +34,6 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final String TAG = "MainActivity";
     private static final int PERMISSION_REQUEST_CODE = 100;
-    private static final int REQUEST_CODE_BLE_SCAN = 102;
     private static final float FALL_THRESHOLD = 25.0f;
 
     // UI Components
@@ -52,11 +43,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button btnBackToOnboarding;
     private ChartView heartRateChartView, oxygenChartView;
 
-    // BLE Components
-    private CardView cardBLEConnection;
-    private TextView tvBLEStatus, tvDeviceName;
-    private ImageView imgBLEStatus;
-    private Button btnScanDevice, btnDisconnect;
+    // BLE Service (background only)
     private BLEService bleService;
     private boolean bleServiceBound = false;
     private String connectedDeviceAddress;
@@ -70,9 +57,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private HealthDataManager dataManager;
     private long lastFallDetectionTime = 0;
 
-    // Activity Result Launchers
-    private ActivityResultLauncher<Intent> bleScanLauncher;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,7 +66,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         dataManager = HealthDataManager.getInstance(this);
 
         initViews();
-        setupActivityResultLaunchers();
         checkPermissions();
         setupSensors();
         startClock();
@@ -116,14 +99,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         heartRateChartView = findViewById(R.id.heartRateChartView);
         oxygenChartView = findViewById(R.id.oxygenChartView);
 
-        // BLE Views
-        cardBLEConnection = findViewById(R.id.cardBLEConnection);
-        tvBLEStatus = findViewById(R.id.tvBLEStatus);
-        tvDeviceName = findViewById(R.id.tvDeviceName);
-        imgBLEStatus = findViewById(R.id.imgBLEStatus);
-        btnScanDevice = findViewById(R.id.btnScanDevice);
-        btnDisconnect = findViewById(R.id.btnDisconnect);
-
         // Kiểm tra null
         if (heartRateChartView == null) {
             Log.e(TAG, "heartRateChartView is NULL!");
@@ -133,22 +108,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         Log.d(TAG, "Views initialized");
-    }
-
-    private void setupActivityResultLaunchers() {
-        bleScanLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        String deviceAddress = result.getData().getStringExtra("device_address");
-                        String deviceName = result.getData().getStringExtra("device_name");
-
-                        if (deviceAddress != null) {
-                            connectToDevice(deviceAddress, deviceName);
-                        }
-                    }
-                }
-        );
     }
 
     private void checkPermissions() {
@@ -223,73 +182,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         cardAdvanced.setOnClickListener(v -> {
             startActivity(new Intent(MainActivity.this, AdvancedSettingsActivity.class));
         });
-
-        // BLE Click Listeners
-        btnScanDevice.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, BLEScanActivity.class);
-            bleScanLauncher.launch(intent);
-        });
-
-        btnDisconnect.setOnClickListener(v -> {
-            disconnectDevice();
-        });
-
-        cardBLEConnection.setOnClickListener(v -> {
-            if (bleService != null && bleService.isConnected()) {
-                // Hiển thị menu tùy chọn
-                showBLEOptionsMenu();
-            } else {
-                Intent intent = new Intent(MainActivity.this, BLEScanActivity.class);
-                bleScanLauncher.launch(intent);
-            }
-        });
-    }
-
-    private void showBLEOptionsMenu() {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        builder.setTitle("Tùy chọn BLE");
-
-        String[] options = {
-                "Đồng bộ dữ liệu",
-                "Chế độ tiết kiệm pin",
-                "Chế độ bình thường",
-                "Chế độ độ chính xác cao",
-                "Ngắt kết nối"
-        };
-
-        builder.setItems(options, (dialog, which) -> {
-            switch (which) {
-                case 0: // Sync
-                    if (bleService != null) {
-                        bleService.syncData();
-                        Toast.makeText(this, "Đang đồng bộ dữ liệu...", Toast.LENGTH_SHORT).show();
-                    }
-                    break;
-                case 1: // Low Power
-                    if (bleService != null) {
-                        bleService.changeSamplingMode(0);
-                        Toast.makeText(this, "Chuyển sang chế độ tiết kiệm pin", Toast.LENGTH_SHORT).show();
-                    }
-                    break;
-                case 2: // Normal
-                    if (bleService != null) {
-                        bleService.changeSamplingMode(1);
-                        Toast.makeText(this, "Chuyển sang chế độ bình thường", Toast.LENGTH_SHORT).show();
-                    }
-                    break;
-                case 3: // High Accuracy
-                    if (bleService != null) {
-                        bleService.changeSamplingMode(2);
-                        Toast.makeText(this, "Chuyển sang chế độ độ chính xác cao", Toast.LENGTH_SHORT).show();
-                    }
-                    break;
-                case 4: // Disconnect
-                    disconnectDevice();
-                    break;
-            }
-        });
-
-        builder.show();
     }
 
     // BLE Service Connection
@@ -302,7 +194,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             if (!bleService.initialize()) {
                 Log.e(TAG, "Unable to initialize Bluetooth");
-                finish();
             }
 
             Log.d(TAG, "BLE Service connected");
@@ -323,11 +214,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             final String action = intent.getAction();
 
             if (BLEService.ACTION_GATT_CONNECTED.equals(action)) {
-                updateBLEConnectionStatus(true);
                 Toast.makeText(MainActivity.this, "Đã kết nối với đồng hồ", Toast.LENGTH_SHORT).show();
+                tvBatteryStatus.setText("Đã kết nối với " + connectedDeviceName);
             } else if (BLEService.ACTION_GATT_DISCONNECTED.equals(action)) {
-                updateBLEConnectionStatus(false);
                 Toast.makeText(MainActivity.this, "Đã ngắt kết nối", Toast.LENGTH_SHORT).show();
+                tvBatteryStatus.setText("Đã kết nối với đồng hồ của bạn...");
             } else if (BLEService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 Log.d(TAG, "Services discovered");
             } else if (BLEService.ACTION_DATA_AVAILABLE.equals(action)) {
@@ -350,71 +241,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         LocalBroadcastManager.getInstance(this).registerReceiver(bleUpdateReceiver, filter);
     }
 
-    private void connectToDevice(String address, String name) {
-        if (bleService != null) {
-            connectedDeviceAddress = address;
-            connectedDeviceName = name;
-
-            boolean result = bleService.connect(address);
-            if (result) {
-                Log.d(TAG, "Connecting to: " + address);
-                updateBLEConnectionStatus(false); // Đang kết nối
-
-                // Lưu vào SharedPreferences
-                SharedPreferences prefs = getSharedPreferences("BLEPrefs", MODE_PRIVATE);
-                prefs.edit()
-                        .putString("device_address", address)
-                        .putString("device_name", name)
-                        .apply();
-            } else {
-                Toast.makeText(this, "Không thể kết nối", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    private void disconnectDevice() {
-        if (bleService != null) {
-            bleService.disconnect();
-            connectedDeviceAddress = null;
-            connectedDeviceName = null;
-
-            // Xóa khỏi SharedPreferences
-            SharedPreferences prefs = getSharedPreferences("BLEPrefs", MODE_PRIVATE);
-            prefs.edit().clear().apply();
-        }
-    }
-
     private void loadSavedConnection() {
-        SharedPreferences prefs = getSharedPreferences("BLEPrefs", MODE_PRIVATE);
-        String savedAddress = prefs.getString("device_address", null);
-        String savedName = prefs.getString("device_name", null);
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String savedAddress = prefs.getString("connectedDeviceAddress", null);
+        String savedName = prefs.getString("connectedDeviceName", null);
 
         if (savedAddress != null && savedName != null) {
+            connectedDeviceAddress = savedAddress;
+            connectedDeviceName = savedName;
+
             // Tự động kết nối lại
             new Handler().postDelayed(() -> {
                 if (bleService != null && !bleService.isConnected()) {
-                    connectToDevice(savedAddress, savedName);
+                    bleService.connect(savedAddress);
+                    tvBatteryStatus.setText("Đang kết nối với " + savedName + "...");
                 }
             }, 1000);
-        }
-    }
-
-    private void updateBLEConnectionStatus(boolean connected) {
-        if (connected) {
-            tvBLEStatus.setText("Đã kết nối");
-            tvBLEStatus.setTextColor(Color.parseColor("#4CAF50"));
-            tvDeviceName.setText(connectedDeviceName != null ? connectedDeviceName : "ESP32 Watch");
-            tvDeviceName.setVisibility(View.VISIBLE);
-            imgBLEStatus.setColorFilter(Color.parseColor("#4CAF50"));
-            btnScanDevice.setVisibility(View.GONE);
-            btnDisconnect.setVisibility(View.VISIBLE);
-        } else {
-            tvBLEStatus.setText("Chưa kết nối");
-            tvBLEStatus.setTextColor(Color.parseColor("#F44336"));
-            tvDeviceName.setVisibility(View.GONE);
-            imgBLEStatus.setColorFilter(Color.parseColor("#757575"));
-            btnScanDevice.setVisibility(View.VISIBLE);
-            btnDisconnect.setVisibility(View.GONE);
         }
     }
 
@@ -437,7 +279,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 dialog.dismiss();
             });
             builder.setNegativeButton("Gọi khẩn cấp", (dialog, which) -> {
-                // TODO: Implement emergency call
                 Toast.makeText(this, "Đang gọi số khẩn cấp...", Toast.LENGTH_SHORT).show();
             });
             builder.setCancelable(false);

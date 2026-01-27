@@ -23,7 +23,15 @@ public class OnboardingActivity extends AppCompatActivity {
         boolean hasOnboarded = prefs.getBoolean("hasOnboarded", false);
 
         if (hasOnboarded) {
-            startActivity(new Intent(this, com.example.watchapp.MainActivity.class));
+            // Kiểm tra đã có device chưa
+            String deviceAddress = prefs.getString("connectedDeviceAddress", null);
+            if (deviceAddress != null) {
+                // Đã có device -> vào MainActivity
+                startActivity(new Intent(this, MainActivity.class));
+            } else {
+                // Chưa có device -> vào BLEScanActivity
+                startActivity(new Intent(this, BLEScanActivity.class));
+            }
             finish();
             return;
         }
@@ -41,7 +49,8 @@ public class OnboardingActivity extends AppCompatActivity {
 
         btnGetStarted.setOnClickListener(v -> {
             prefs.edit().putBoolean("hasOnboarded", true).apply();
-            startActivity(new Intent(OnboardingActivity.this, com.example.watchapp.MainActivity.class));
+            // Chuyển đến BLEScanActivity để kết nối device
+            startActivity(new Intent(OnboardingActivity.this, BLEScanActivity.class));
             finish();
         });
     }

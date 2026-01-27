@@ -7,11 +7,15 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -44,6 +48,9 @@ public class BLEScanActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private TextView tvStatus;
 
+    private BLEService bleService;
+    private boolean serviceBound = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +60,10 @@ public class BLEScanActivity extends AppCompatActivity {
         setupRecyclerView();
         checkBluetooth();
         checkPermissions();
+
+        // Bind BLE Service
+        Intent serviceIntent = new Intent(this, BLEService.class);
+        bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
     }
 
     private void initViews() {
@@ -101,11 +112,11 @@ public class BLEScanActivity extends AppCompatActivity {
 
         if (!bluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
-                    != PackageManager.PERMISSION_GRANTED) {
-                return;
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                            == PackageManager.PERMISSION_GRANTED) {
+                startActivityForResult(enableBtIntent, 1);
             }
-            startActivityForResult(enableBtIntent, 1);
         }
 
         bleScanner = bluetoothAdapter.getBluetoothLeScanner();
@@ -115,7 +126,6 @@ public class BLEScanActivity extends AppCompatActivity {
         List<String> permissionsNeeded = new ArrayList<>();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                     != PackageManager.PERMISSION_GRANTED) {
                 permissionsNeeded.add(Manifest.permission.BLUETOOTH_SCAN);
@@ -123,16 +133,6 @@ public class BLEScanActivity extends AppCompatActivity {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
                     != PackageManager.PERMISSION_GRANTED) {
                 permissionsNeeded.add(Manifest.permission.BLUETOOTH_CONNECT);
-            }
-        } else {
-            // Android 11 và thấp hơn
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH)
-                    != PackageManager.PERMISSION_GRANTED) {
-                permissionsNeeded.add(Manifest.permission.BLUETOOTH);
-            }
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADMIN)
-                    != PackageManager.PERMISSION_GRANTED) {
-                permissionsNeeded.add(Manifest.permission.BLUETOOTH_ADMIN);
             }
         }
 
@@ -149,12 +149,27 @@ public class BLEScanActivity extends AppCompatActivity {
     }
 
     private void startScan() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+        // Android 8 yêu cầu Location permission
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             checkPermissions();
             return;
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+                    != PackageManager.PERMISSION_GRANTED) {
+                checkPermissions();
+                return;
+            }
+        }
+
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
+            Toast.makeText(this, "Bluetooth chưa bật", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        bleScanner = bluetoothAdapter.getBluetoothLeScanner();
         if (bleScanner == null) {
             Toast.makeText(this, "BLE Scanner không khả dụng", Toast.LENGTH_SHORT).show();
             return;
@@ -167,22 +182,21 @@ public class BLEScanActivity extends AppCompatActivity {
 
         bleScanner.startScan(scanCallback);
 
-        // Tự động dừng sau SCAN_PERIOD
         handler.postDelayed(() -> {
-            if (scanning) {
-                stopScan();
-            }
+            if (scanning) stopScan();
         }, SCAN_PERIOD);
 
         Log.d(TAG, "Started BLE scan");
     }
 
+
     private void stopScan() {
         if (!scanning) return;
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
-                != PackageManager.PERMISSION_GRANTED) {
-            return;
+        if (bleScanner != null) {
+            try {
+                bleScanner.stopScan(scanCallback);
+            } catch (Exception ignored) {}
         }
 
         scanning = false;
@@ -190,12 +204,9 @@ public class BLEScanActivity extends AppCompatActivity {
         progressBar.setVisibility(View.GONE);
         tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
 
-        if (bleScanner != null) {
-            bleScanner.stopScan(scanCallback);
-        }
-
         Log.d(TAG, "Stopped BLE scan");
     }
+
 
     private final ScanCallback scanCallback = new ScanCallback() {
         @Override
@@ -203,6 +214,16 @@ public class BLEScanActivity extends AppCompatActivity {
             super.onScanResult(callbackType, result);
 
             BluetoothDevice device = result.getDevice();
+
+            // Log devices
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
+                        Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    Log.d(TAG, "Found: " + device.getName() + " (" + device.getAddress() + ")");
+                }
+            } else {
+                Log.d(TAG, "Found: " + device.getName() + " (" + device.getAddress() + ")");
+            }
 
             // Kiểm tra xem device đã có trong list chưa
             boolean deviceExists = false;
@@ -217,7 +238,7 @@ public class BLEScanActivity extends AppCompatActivity {
                 deviceList.add(device);
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
                 tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
-                Log.d(TAG, "Found device: " + device.getAddress());
+                Log.d(TAG, "Added device: " + device.getAddress());
             }
         }
 
@@ -239,9 +260,11 @@ public class BLEScanActivity extends AppCompatActivity {
     };
 
     private void connectToDevice(BluetoothDevice device) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED) {
-            return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                    != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
         }
 
         String deviceName = device.getName();
@@ -251,13 +274,58 @@ public class BLEScanActivity extends AppCompatActivity {
         Toast.makeText(this, "Đang kết nối với " +
                 (deviceName != null ? deviceName : deviceAddress), Toast.LENGTH_SHORT).show();
 
-        // Trả về địa chỉ device cho MainActivity
-        Intent resultIntent = new Intent();
-        resultIntent.putExtra("device_address", deviceAddress);
-        resultIntent.putExtra("device_name", deviceName != null ? deviceName : "Unknown");
-        setResult(RESULT_OK, resultIntent);
-        finish();
+        // Kết nối qua BLE Service
+        if (serviceBound && bleService != null) {
+            bleService.initialize();
+            boolean success = bleService.connect(deviceAddress);
+
+            if (success) {
+                // Lưu thông tin device
+                SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                prefs.edit()
+                        .putString("connectedDeviceAddress", deviceAddress)
+                        .putString("connectedDeviceName", deviceName != null ? deviceName : "Unknown")
+                        .apply();
+
+                // Chờ 1.5 giây rồi chuyển sang MainActivity
+                handler.postDelayed(() -> {
+                    Toast.makeText(this, "Đã kết nối!", Toast.LENGTH_SHORT).show();
+
+                    Intent intent = new Intent(BLEScanActivity.this, MainActivity.class);
+                    intent.putExtra("device_address", deviceAddress);
+                    intent.putExtra("device_name", deviceName);
+                    startActivity(intent);
+                    finish();
+                }, 1500);
+            } else {
+                Toast.makeText(this, "Kết nối thất bại", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "BLE Service chưa sẵn sàng", Toast.LENGTH_SHORT).show();
+        }
     }
+
+    // Service Connection
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            BLEService.LocalBinder binder = (BLEService.LocalBinder) service;
+            bleService = binder.getService();
+            serviceBound = true;
+
+            if (!bleService.initialize()) {
+                Log.e(TAG, "Unable to initialize Bluetooth");
+            }
+            Log.d(TAG, "BLE Service connected");
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            bleService = null;
+            serviceBound = false;
+            Log.d(TAG, "BLE Service disconnected");
+        }
+    };
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
@@ -283,5 +351,10 @@ public class BLEScanActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         stopScan();
+
+        if (serviceBound) {
+            unbindService(serviceConnection);
+            serviceBound = false;
+        }
     }
 }

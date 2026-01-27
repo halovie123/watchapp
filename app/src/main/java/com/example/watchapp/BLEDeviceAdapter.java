@@ -55,15 +55,20 @@ public class BLEDeviceAdapter extends RecyclerView.Adapter<BLEDeviceAdapter.Devi
         }
 
         public void bind(BluetoothDevice device, OnDeviceClickListener listener) {
-            if (ActivityCompat.checkSelfPermission(itemView.getContext(),
-                    Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
 
-                String deviceName = device.getName();
-                tvDeviceName.setText(deviceName != null ? deviceName : "Unknown Device");
+            String deviceName = null;
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                if (ActivityCompat.checkSelfPermission(itemView.getContext(),
+                        Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    deviceName = device.getName();
+                }
             } else {
-                tvDeviceName.setText("Unknown Device");
+                // Android 8–11 không cần BLUETOOTH_CONNECT
+                deviceName = device.getName();
             }
 
+            tvDeviceName.setText(deviceName != null ? deviceName : "Unknown Device");
             tvDeviceAddress.setText(device.getAddress());
 
             itemView.setOnClickListener(v -> {
@@ -72,5 +77,6 @@ public class BLEDeviceAdapter extends RecyclerView.Adapter<BLEDeviceAdapter.Devi
                 }
             });
         }
+
     }
 }
