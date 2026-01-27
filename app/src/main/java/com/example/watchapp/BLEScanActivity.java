@@ -215,20 +215,38 @@ public class BLEScanActivity extends AppCompatActivity {
 
             BluetoothDevice device = result.getDevice();
 
-            // Log devices
+            // Log devices - PHẢI kiểm tra permission trước
+            String deviceName = "Unknown";
+            String deviceAddress = "Unknown";
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
                         Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                    Log.d(TAG, "Found: " + device.getName() + " (" + device.getAddress() + ")");
+                    deviceName = device.getName() != null ? device.getName() : "Unknown";
+                    deviceAddress = device.getAddress();
+                    Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
                 }
             } else {
-                Log.d(TAG, "Found: " + device.getName() + " (" + device.getAddress() + ")");
+                deviceName = device.getName() != null ? device.getName() : "Unknown";
+                deviceAddress = device.getAddress();
+                Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
             }
 
             // Kiểm tra xem device đã có trong list chưa
             boolean deviceExists = false;
             for (BluetoothDevice d : deviceList) {
-                if (d.getAddress().equals(device.getAddress())) {
+                // Also need permission check here
+                String existingAddress = "Unknown";
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
+                            Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        existingAddress = d.getAddress();
+                    }
+                } else {
+                    existingAddress = d.getAddress();
+                }
+
+                if (existingAddress.equals(deviceAddress)) {
                     deviceExists = true;
                     break;
                 }
@@ -238,7 +256,7 @@ public class BLEScanActivity extends AppCompatActivity {
                 deviceList.add(device);
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
                 tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
-                Log.d(TAG, "Added device: " + device.getAddress());
+                Log.d(TAG, "Added device: " + deviceAddress);
             }
         }
 

@@ -1,21 +1,17 @@
 package com.example.watchapp;
 
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothManager;
-import android.bluetooth.BluetoothProfile;
+import android.bluetooth.*;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+import android.os.Build;
 import android.util.Log;
+import androidx.core.app.ActivityCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.UUID;
@@ -23,16 +19,13 @@ import java.util.UUID;
 public class BLEService extends Service {
     private static final String TAG = "BLEService";
 
-    // UUIDs cho ESP32 BLE Server
-    // Bạn cần đổi các UUID này cho khớp với ESP32
     public static final UUID SERVICE_UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
     public static final UUID CHARACTERISTIC_SENSOR_DATA_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8");
     public static final UUID CHARACTERISTIC_COMMAND_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a9");
 
-    // Client Characteristic Configuration Descriptor
-    private static final UUID CLIENT_CHARACTERISTIC_CONFIG = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+    private static final UUID CLIENT_CHARACTERISTIC_CONFIG =
+            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
-    // Broadcast actions
     public static final String ACTION_GATT_CONNECTED = "com.example.watchapp.ACTION_GATT_CONNECTED";
     public static final String ACTION_GATT_DISCONNECTED = "com.example.watchapp.ACTION_GATT_DISCONNECTED";
     public static final String ACTION_GATT_SERVICES_DISCOVERED = "com.example.watchapp.ACTION_GATT_SERVICES_DISCOVERED";
@@ -68,26 +61,29 @@ public class BLEService extends Service {
         return super.onUnbind(intent);
     }
 
-    // Callback cho GATT operations
+    // ================= PERMISSION CHECK =================
+    private boolean hasBluetoothConnectPermission() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                        == PackageManager.PERMISSION_GRANTED;
+    }
+
+    // ================= GATT CALLBACK =================
     private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
+
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                intentAction = ACTION_GATT_CONNECTED;
                 connectionState = STATE_CONNECTED;
-                broadcastUpdate(intentAction);
-                Log.i(TAG, "Connected to GATT server.");
+                broadcastUpdate(ACTION_GATT_CONNECTED);
+                Log.i(TAG, "Connected to GATT server");
 
-                // Discover services
-                Log.i(TAG, "Attempting to start service discovery:" +
-                        bluetoothGatt.discoverServices());
+                bluetoothGatt.discoverServices();
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                intentAction = ACTION_GATT_DISCONNECTED;
                 connectionState = STATE_DISCONNECTED;
-                Log.i(TAG, "Disconnected from GATT server.");
-                broadcastUpdate(intentAction);
+                broadcastUpdate(ACTION_GATT_DISCONNECTED);
+                Log.i(TAG, "Disconnected from GATT server");
             }
         }
 
@@ -95,12 +91,7 @@ public class BLEService extends Service {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
-                Log.i(TAG, "Services discovered");
-
-                // Tự động enable notifications cho sensor data
                 enableSensorDataNotifications();
-            } else {
-                Log.w(TAG, "onServicesDiscovered received: " + status);
             }
         }
 
@@ -118,261 +109,179 @@ public class BLEService extends Service {
                                             BluetoothGattCharacteristic characteristic) {
             broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
         }
-
-        @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt,
-                                          BluetoothGattCharacteristic characteristic,
-                                          int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d(TAG, "Characteristic write successful");
-            } else {
-                Log.e(TAG, "Characteristic write failed: " + status);
-            }
-        }
-
-        @Override
-        public void onDescriptorWrite(BluetoothGatt gatt,
-                                      BluetoothGattDescriptor descriptor,
-                                      int status) {
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.d(TAG, "Descriptor write successful");
-            } else {
-                Log.e(TAG, "Descriptor write failed: " + status);
-            }
-        }
     };
 
-    private void broadcastUpdate(final String action) {
-        final Intent intent = new Intent(action);
+    // ================= BROADCAST =================
+    private void broadcastUpdate(String action) {
+        Intent intent = new Intent(action);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    private void broadcastUpdate(final String action,
-                                 final BluetoothGattCharacteristic characteristic) {
-        final Intent intent = new Intent(action);
+    private void broadcastUpdate(String action, BluetoothGattCharacteristic characteristic) {
+        Intent intent = new Intent(action);
 
-        // Kiểm tra nếu là sensor data characteristic
         if (CHARACTERISTIC_SENSOR_DATA_UUID.equals(characteristic.getUuid())) {
             try {
-                // Parse JSON data từ ESP32
                 String jsonString = new String(characteristic.getValue());
-                Log.d(TAG, "Received data: " + jsonString);
-
                 intent.putExtra(EXTRA_DATA, jsonString);
-
-                // Parse và lưu dữ liệu
                 parseSensorData(jsonString);
-
             } catch (Exception e) {
-                Log.e(TAG, "Error parsing sensor data: " + e.getMessage());
+                Log.e(TAG, "Parse error: " + e.getMessage());
             }
         }
 
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
+    // ================= JSON PARSE =================
     private void parseSensorData(String jsonString) {
         try {
-            JSONObject jsonData = new JSONObject(jsonString);
+            JSONObject json = new JSONObject(jsonString);
 
-            // Lấy dữ liệu từ JSON
-            if (jsonData.has("heartRate")) {
-                int heartRate = jsonData.getInt("heartRate");
-                HealthDataManager.getInstance(this).saveHeartRateData(heartRate);
-                Log.d(TAG, "Heart Rate: " + heartRate);
+            if (json.has("heartRate")) {
+                HealthDataManager.getInstance(this)
+                        .saveHeartRateData(json.getInt("heartRate"));
             }
 
-            if (jsonData.has("spo2")) {
-                int spo2 = jsonData.getInt("spo2");
-                HealthDataManager.getInstance(this).saveOxygenData(spo2);
-                Log.d(TAG, "SpO2: " + spo2);
+            if (json.has("spo2")) {
+                HealthDataManager.getInstance(this)
+                        .saveOxygenData(json.getInt("spo2"));
             }
 
-            if (jsonData.has("accelX") && jsonData.has("accelY") && jsonData.has("accelZ")) {
-                double accelX = jsonData.getDouble("accelX");
-                double accelY = jsonData.getDouble("accelY");
-                double accelZ = jsonData.getDouble("accelZ");
-                Log.d(TAG, String.format("Accel: X=%.2f, Y=%.2f, Z=%.2f", accelX, accelY, accelZ));
-
-                // Tính toán và kiểm tra nguy cơ té ngã
-                checkFallRisk(accelX, accelY, accelZ);
+            if (json.has("accelX")) {
+                double x = json.getDouble("accelX");
+                double y = json.getDouble("accelY");
+                double z = json.getDouble("accelZ");
+                checkFallRisk(x, y, z);
             }
 
         } catch (JSONException e) {
-            Log.e(TAG, "Error parsing JSON: " + e.getMessage());
+            Log.e(TAG, "JSON error: " + e.getMessage());
         }
     }
 
     private void checkFallRisk(double x, double y, double z) {
-        // Tính độ lớn gia tốc
         double magnitude = Math.sqrt(x*x + y*y + z*z);
 
-        // Ngưỡng phát hiện té ngã (có thể điều chỉnh)
         if (magnitude > 25.0 || magnitude < 2.0) {
-            Log.w(TAG, "Potential fall detected! Magnitude: " + magnitude);
-            // Gửi broadcast để hiển thị cảnh báo
             Intent fallIntent = new Intent("com.example.watchapp.FALL_DETECTED");
             fallIntent.putExtra("magnitude", magnitude);
             LocalBroadcastManager.getInstance(this).sendBroadcast(fallIntent);
         }
     }
 
+    // ================= INIT =================
     public boolean initialize() {
-        if (bluetoothManager == null) {
-            bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            if (bluetoothManager == null) {
-                Log.e(TAG, "Unable to initialize BluetoothManager.");
-                return false;
-            }
-        }
-
+        bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
-        if (bluetoothAdapter == null) {
-            Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
-            return false;
-        }
-
-        return true;
+        return bluetoothAdapter != null;
     }
 
-    public boolean connect(final String address) {
-        if (bluetoothAdapter == null || address == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
+    // ================= CONNECT =================
+    public boolean connect(String address) {
+
+        if (!hasBluetoothConnectPermission()) {
+            Log.e(TAG, "Missing BLUETOOTH_CONNECT permission");
             return false;
         }
 
-        // Nếu đã kết nối với device này, sử dụng lại connection
-        if (deviceAddress != null && address.equals(deviceAddress)
-                && bluetoothGatt != null) {
-            Log.d(TAG, "Trying to use an existing BluetoothGatt for connection.");
-            if (bluetoothGatt.connect()) {
-                connectionState = STATE_CONNECTING;
-                return true;
-            } else {
-                return false;
-            }
+        if (bluetoothAdapter == null || address == null) return false;
+
+        if (deviceAddress != null && address.equals(deviceAddress) && bluetoothGatt != null) {
+            bluetoothGatt.connect();
+            connectionState = STATE_CONNECTING;
+            return true;
         }
 
-        final BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
-        if (device == null) {
-            Log.w(TAG, "Device not found. Unable to connect.");
-            return false;
-        }
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
+        if (device == null) return false;
 
-        // Connect to the GATT server
         bluetoothGatt = device.connectGatt(this, false, gattCallback);
-        Log.d(TAG, "Trying to create a new connection.");
         deviceAddress = address;
         connectionState = STATE_CONNECTING;
         return true;
     }
 
+    // ================= DISCONNECT =================
     public void disconnect() {
-        if (bluetoothAdapter == null || bluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
-            return;
+        if (!hasBluetoothConnectPermission()) return;
+
+        if (bluetoothGatt != null) {
+            bluetoothGatt.disconnect();
         }
-        bluetoothGatt.disconnect();
     }
 
     public void close() {
-        if (bluetoothGatt == null) {
-            return;
+        if (bluetoothGatt != null) {
+            bluetoothGatt.close();
+            bluetoothGatt = null;
         }
-        bluetoothGatt.close();
-        bluetoothGatt = null;
     }
 
-    // Enable notifications cho sensor data characteristic
+    // ================= ENABLE NOTIFY =================
     public void enableSensorDataNotifications() {
-        if (bluetoothAdapter == null || bluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
-            return;
-        }
+
+        if (!hasBluetoothConnectPermission()) return;
 
         BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
-        if (service == null) {
-            Log.e(TAG, "Service not found!");
-            return;
-        }
+        if (service == null) return;
 
         BluetoothGattCharacteristic characteristic =
                 service.getCharacteristic(CHARACTERISTIC_SENSOR_DATA_UUID);
-        if (characteristic == null) {
-            Log.e(TAG, "Characteristic not found!");
-            return;
-        }
+        if (characteristic == null) return;
 
-        // Enable local notifications
         bluetoothGatt.setCharacteristicNotification(characteristic, true);
 
-        // Enable remote notifications
         BluetoothGattDescriptor descriptor =
                 characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG);
+
         if (descriptor != null) {
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             bluetoothGatt.writeDescriptor(descriptor);
-            Log.d(TAG, "Notifications enabled for sensor data");
         }
     }
 
-    // Gửi lệnh đến ESP32
+    // ================= SEND COMMAND =================
     public void sendCommand(byte[] command) {
-        if (bluetoothAdapter == null || bluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
-            return;
-        }
+
+        if (!hasBluetoothConnectPermission()) return;
+        if (bluetoothGatt == null) return;
 
         BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
-        if (service == null) {
-            Log.e(TAG, "Service not found!");
-            return;
-        }
+        if (service == null) return;
 
         BluetoothGattCharacteristic characteristic =
                 service.getCharacteristic(CHARACTERISTIC_COMMAND_UUID);
-        if (characteristic == null) {
-            Log.e(TAG, "Command characteristic not found!");
-            return;
-        }
+        if (characteristic == null) return;
 
         characteristic.setValue(command);
-        boolean success = bluetoothGatt.writeCharacteristic(characteristic);
-        Log.d(TAG, "Command write " + (success ? "initiated" : "failed"));
+        bluetoothGatt.writeCharacteristic(characteristic);
     }
 
-    // Các phương thức tiện ích để gửi lệnh
+    // ================= API COMMANDS =================
     public void changeSamplingMode(int mode) {
-        byte[] command = new byte[]{0x01, (byte)mode};
-        sendCommand(command);
-        Log.d(TAG, "Changing sampling mode to: " + mode);
+        sendCommand(new byte[]{0x01, (byte) mode});
     }
 
     public void updateMAX30102Config(int ledCurrent, int sampleRate) {
-        byte[] command = new byte[]{
+        sendCommand(new byte[]{
                 0x02,
-                (byte)ledCurrent,
-                (byte)(sampleRate & 0xFF),
-                (byte)((sampleRate >> 8) & 0xFF)
-        };
-        sendCommand(command);
-        Log.d(TAG, "Updating MAX30102 config");
+                (byte) ledCurrent,
+                (byte) (sampleRate & 0xFF),
+                (byte) ((sampleRate >> 8) & 0xFF)
+        });
     }
 
     public void updateMPU6050Config(int accelRange, int gyroRange) {
-        byte[] command = new byte[]{
+        sendCommand(new byte[]{
                 0x03,
-                (byte)accelRange,
-                (byte)gyroRange
-        };
-        sendCommand(command);
-        Log.d(TAG, "Updating MPU6050 config");
+                (byte) accelRange,
+                (byte) gyroRange
+        });
     }
 
     public void syncData() {
-        byte[] command = new byte[]{0x10};  // Command để sync
-        sendCommand(command);
-        Log.d(TAG, "Sync data request sent");
+        sendCommand(new byte[]{0x10});
     }
 
     public boolean isConnected() {
