@@ -51,7 +51,7 @@ public class OnboardingActivity extends AppCompatActivity {
             prefs.edit().putBoolean("hasOnboarded", true).apply();
             // Chuyển đến BLEScanActivity để kết nối device
             startActivity(new Intent(OnboardingActivity.this, BLEScanActivity.class));
-            finish();
+
         });
     }
 }

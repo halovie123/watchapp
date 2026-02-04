@@ -44,7 +44,7 @@ public class BLEScanActivity extends AppCompatActivity {
     private boolean scanning = false;
 
     private RecyclerView recyclerView;
-    private Button btnScan, btnBack;
+    private Button btnScan, btnBackToOnboarding;
     private ProgressBar progressBar;
     private TextView tvStatus;
 
@@ -69,7 +69,7 @@ public class BLEScanActivity extends AppCompatActivity {
     private void initViews() {
         recyclerView = findViewById(R.id.recyclerViewDevices);
         btnScan = findViewById(R.id.btnScan);
-        btnBack = findViewById(R.id.btnBack);
+        btnBackToOnboarding = findViewById(R.id.btnBackToOnboarding);
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
 
@@ -86,8 +86,12 @@ public class BLEScanActivity extends AppCompatActivity {
             }
         });
 
-        btnBack.setOnClickListener(v -> finish());
-    }
+        btnBackToOnboarding.setOnClickListener(v -> {
+            // Xóa thông tin đã onboard để quay về onboarding
+            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+            prefs.edit().putBoolean("hasOnboarded", false).apply();
+            finish();
+        });    }
 
     private void setupRecyclerView() {
         deviceAdapter = new BLEDeviceAdapter(deviceList, device -> {
