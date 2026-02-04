@@ -41,8 +41,8 @@ public class OnboardingFragment extends Fragment {
         switch (position) {
             case 0:
                 imageView.setImageResource(R.drawable.watch_image);
-                title.setText("Exquisite Timepieces for\nthe Modern Gentleman");
-                description.setText("Discover the fusion of tech and style with our smartwatches.");
+                title.setText("Designed for health. Built for life.");
+                description.setText("Monitor your heart rate, oxygen levels, and activity in real time.");
                 break;
             case 1:
                 imageView.setImageResource(R.drawable._watch);
