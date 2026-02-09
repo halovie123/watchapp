@@ -19,7 +19,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:text="Exquisite Timepieces for\nthe Modern Gentleman"
+        android:text="Smart Health Watch\nfor the Modern Lifestyle"
         android:textAlignment="center"
         android:textColor="@color/black"
         android:textSize="22sp"
@@ -29,7 +29,7 @@
         android:id="@+id/descriptionOnboarding"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Discover the fusion of tech and style with our smartwatches."
+        android:text="Discover the Design and technology of a Smart Health Monitoring Watch."
         android:textAlignment="center"
         android:textColor="@color/gray"
         android:textSize="14sp" />

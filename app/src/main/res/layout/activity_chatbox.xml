@@ -10,7 +10,7 @@
         android:id="@+id/chatHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#1E88E5"
+        android:background="#6B9B7A"
         android:elevation="4dp"
         android:orientation="horizontal"
         android:padding="16dp"
@@ -49,12 +49,12 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <TextView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:text="🤖"
-            android:textSize="32sp"
-            android:gravity="center" />
+        <ImageView
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:layout_marginBottom="1dp"
+            android:contentDescription="Heart"
+            android:src="@drawable/ic_robot" />
     </LinearLayout>
 
     <!-- Chat Messages ScrollView -->

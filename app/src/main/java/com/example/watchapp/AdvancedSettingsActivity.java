@@ -111,7 +111,7 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
         }
 
         // Load watch info
-        tvWatchName.setText("Tên đồng hồ: " + prefs.getString("watchName", "SmartWatch-1907"));
+        tvWatchName.setText("Tên đồng hồ: " + prefs.getString("watchName", "SmartWatch-3CG"));
         tvWatchVersion.setText("Phiên bản: " + prefs.getString("watchVersion", "v1.1.0"));
 
         // Load time (phút và giây)
