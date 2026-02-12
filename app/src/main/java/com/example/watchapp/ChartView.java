@@ -63,18 +63,21 @@ public class ChartView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        int width = getWidth();
+        int height = getHeight();
+
         if (dataPoints == null || dataPoints.isEmpty()) {
             // Vẽ text "Chưa có dữ liệu"
             Paint textPaint = new Paint();
             textPaint.setColor(0xFF999999);
             textPaint.setTextSize(36f);
             textPaint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("Chưa có dữ liệu", getWidth() / 2f, getHeight() / 2f, textPaint);
+            String noData = getContext().getString(R.string.no_data);
+            canvas.drawText(noData, width / 2f, height / 2f, textPaint);
             return;
         }
 
-        int width = getWidth();
-        int height = getHeight();
+
         int paddingLeft = 60;
         int padding = 20;
 

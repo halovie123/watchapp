@@ -13,7 +13,7 @@
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:layout_weight="1"
-        android:hint="Thêm email/sđt (chú thích)"
+        android:hint="@string/add_contact_hint"
         android:textSize="15sp"
         android:textColor="#000000"
         android:textColorHint="#999999"

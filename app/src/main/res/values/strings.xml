@@ -1,4 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">TechWrist</string>
+
+    <!-- Onboarding -->
+    <string name="get_started">Bắt đầu</string>
+    <string name="onboarding_title">Đồng hồ sức khỏe thông minh\ncho phong cách sống hiện đại</string>
+    <string name="onboarding_desc">Khám phá thiết kế và công nghệ của đồng hồ theo dõi sức khỏe thông minh.</string>
+
+    <!-- Main Screen -->
+    <string name="smart_watch">Đồng hồ thông minh</string>
+    <string name="battery_connected">Đã kết nối với đồng hồ của bạn ...</string>
+    <string name="heart_rate">Nhịp tim</string>
+    <string name="oxygen_level">Nồng độ oxy</string>
+    <string name="fall_detection">Cảnh báo vấp ngã</string>
+    <string name="display">Hiển thị</string>
+    <string name="advanced">Nâng cao</string>
+    <string name="heart_rate_24h">Nhịp tim 24h</string>
+    <string name="oxygen_24h">Nồng độ oxy 24h</string>
+    <string name="average_range">Trung bình: 72-78 BPM</string>
+    <string name="average_range_oxy">Trung bình: 95-98%</string>
+    <string name="no_data">Chưa có dữ liệu</string>
+
+    <!-- Heart Rate -->
+    <string name="measure_heart_rate">Đo nhịp tim</string>
+    <string name="start_measuring">Bắt đầu đo</string>
+    <string name="stop_measuring">Dừng đo</string>
+    <string name="measuring_heart_rate">Đang đo nhịp tim...</string>
+    <string name="press_to_measure">Nhấn nút để đo nhịp tim</string>
+    <string name="heart_rate_low">Nhịp tim thấp</string>
+    <string name="heart_rate_high">Nhịp tim cao</string>
+    <string name="heart_rate_normal">Nhịp tim bình thường</string>
+
+    <!-- Oxygen -->
+    <string name="measure_oxygen">Đo nồng độ oxy</string>
+    <string name="measuring_oxygen">Đang đo nồng độ oxy...</string>
+    <string name="press_to_measure_spo2">Nhấn nút để đo SpO2</string>
+    <string name="oxygen_low">Nồng độ oxy thấp</string>
+    <string name="oxygen_normal">Nồng độ oxy bình thường</string>
+
+    <!-- Advanced Settings -->
+    <string name="emergency_contacts">Email, SĐT Người Thân</string>
+    <string name="emergency_contacts_desc">Thêm email, số điện thoại người thân để tự động gửi tin nhắn khi có báo động</string>
+    <string name="add_contact_hint">Thêm email/sđt (chú thích)</string>
+    <string name="add_person">+ Thêm người thân</string>
+    <string name="contact_deleted">Đã xóa người thân</string>
+
+    <string name="check_cycle">Chu kỳ đo</string>
+    <string name="check_once_every">1 lần đo mỗi</string>
+    <string name="minute">Phút</string>
+    <string name="second">Giây</string>
+    <string name="ok">OK</string>
+    <string name="saved_check_cycle">Đã lưu chu kỳ đo: %1$d phút %2$d giây</string>
+
+    <string name="language">Ngôn ngữ</string>
+    <string name="vietnamese">Tiếng Việt</string>
+    <string name="english">English</string>
+    <string name="language_changed_vi">Đã chọn Tiếng Việt</string>
+    <string name="language_changed_en">Selected English</string>
+
+    <string name="watch_info">Thông tin đồng hồ</string>
+    <string name="watch_name">Tên đồng hồ: SmartWatch-3CG</string>
+    <string name="watch_version">Phiên bản: v1.1.0</string>
+
+    <!-- Toast Messages -->
+    <string name="fall_detected">Phát hiện té ngã! Bạn có ổn không?</string>
+    <string name="fall_detection_active">Cảnh báo vấp ngã đang hoạt động</string>
+    <string name="display_settings">Cài đặt hiển thị</string>
 </resources>

@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.Random;
 
-public class OxygenActivity extends AppCompatActivity {
+public class OxygenActivity extends BaseActivity {
     private TextView tvOxygenLevel, tvStatus;
     private Button btnMeasure, btnBack;
     private boolean isMeasuring = false;
@@ -43,16 +43,16 @@ public class OxygenActivity extends AppCompatActivity {
 
     private void startMeasurement() {
         isMeasuring = true;
-        btnMeasure.setText("Dừng đo");
-        tvStatus.setText("Đang đo nồng độ oxy...");
+        btnMeasure.setText(R.string.stop_measuring);
+        tvStatus.setText(R.string.measuring_oxygen);
 
         simulateOxygenLevel();
     }
 
     private void stopMeasurement() {
         isMeasuring = false;
-        btnMeasure.setText("Bắt đầu đo");
-        tvStatus.setText("Nhấn nút để đo SpO2");
+        btnMeasure.setText(R.string.start_measuring);
+        tvStatus.setText(R.string.press_to_measure_spo2);
         handler.removeCallbacksAndMessages(null);
     }
 
@@ -68,9 +68,9 @@ public class OxygenActivity extends AppCompatActivity {
                     dataManager.saveOxygenData(oxygenLevel);
 
                     if (oxygenLevel < 95) {
-                        tvStatus.setText("Nồng độ oxy thấp");
+                        tvStatus.setText(R.string.oxygen_low);
                     } else {
-                        tvStatus.setText("Nồng độ oxy bình thường");
+                        tvStatus.setText(R.string.oxygen_normal);
                     }
 
                     handler.postDelayed(this, 2000);

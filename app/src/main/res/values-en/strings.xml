@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TechWrist</string>
+
+    <!-- Onboarding -->
+    <string name="get_started">Get started</string>
+    <string name="onboarding_title">Smart Health Watch\nfor the Modern Lifestyle</string>
+    <string name="onboarding_desc">Discover the Design and technology of a Smart Health Monitoring Watch.</string>
+
+    <!-- Main Screen -->
+    <string name="smart_watch">SMART WATCH</string>
+    <string name="battery_connected">Connected to your watch ...</string>
+    <string name="heart_rate">Heart Rate</string>
+    <string name="oxygen_level">Oxygen Level</string>
+    <string name="fall_detection">Fall Detection</string>
+    <string name="display">Display</string>
+    <string name="advanced">Advanced</string>
+    <string name="heart_rate_24h">Heart Rate 24h</string>
+    <string name="oxygen_24h">Oxygen Level 24h</string>
+    <string name="average_range">Average: 72-78 BPM</string>
+    <string name="average_range_oxy">Average: 95-98%</string>
+    <string name="no_data">No data available</string>
+
+    <!-- Heart Rate -->
+    <string name="measure_heart_rate">Measure Heart Rate</string>
+    <string name="start_measuring">Start Measuring</string>
+    <string name="stop_measuring">Stop Measuring</string>
+    <string name="measuring_heart_rate">Measuring heart rate...</string>
+    <string name="press_to_measure">Press button to measure heart rate</string>
+    <string name="heart_rate_low">Heart rate low</string>
+    <string name="heart_rate_high">Heart rate high</string>
+    <string name="heart_rate_normal">Heart rate normal</string>
+
+    <!-- Oxygen -->
+    <string name="measure_oxygen">Measure Oxygen Level</string>
+    <string name="measuring_oxygen">Measuring oxygen level...</string>
+    <string name="press_to_measure_spo2">Press button to measure SpO2</string>
+    <string name="oxygen_low">Oxygen level low</string>
+    <string name="oxygen_normal">Oxygen level normal</string>
+
+    <!-- Advanced Settings -->
+    <string name="emergency_contacts">Emergency Contacts</string>
+    <string name="emergency_contacts_desc">Add email and phone numbers of relatives to automatically send alerts</string>
+    <string name="add_contact_hint">Add email/phone (note)</string>
+    <string name="add_person">+ Add Contact</string>
+    <string name="contact_deleted">Contact deleted</string>
+
+    <string name="check_cycle">Check Cycle</string>
+    <string name="check_once_every">Check once every</string>
+    <string name="minute">Minute</string>
+    <string name="second">Second</string>
+    <string name="ok">OK</string>
+    <string name="saved_check_cycle">Saved check cycle: %1$d min %2$d sec</string>
+
+    <string name="language">Language</string>
+    <string name="vietnamese">Vietnamese</string>
+    <string name="english">English</string>
+    <string name="language_changed_vi">Đã chọn Tiếng Việt</string>
+    <string name="language_changed_en">Selected English</string>
+
+    <string name="watch_info">Watch Information</string>
+    <string name="watch_name">Watch name: SmartWatch-3CG</string>
+    <string name="watch_version">Version: v1.1.0</string>
+
+    <!-- Toast Messages -->
+    <string name="fall_detected">⚠️ Fall detected! Are you okay?</string>
+    <string name="fall_detection_active">Fall detection is active</string>
+    <string name="display_settings">Display settings</string>
+</resources>

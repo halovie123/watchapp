@@ -49,4 +49,15 @@
         android:layout_height="0dp"
         android:layout_weight="1"/>
 
+    <Button
+        android:id="@+id/btnMockEnterMain"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_margin="16dp"
+        android:text="⚠️ Vào Main (Giả lập)"
+        android:textAllCaps="false"
+        android:backgroundTint="@color/gray"
+        android:textColor="@android:color/white"
+        android:layout_alignParentBottom="true"/>
+
 </LinearLayout>

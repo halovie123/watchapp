@@ -32,7 +32,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
-                android:text="Nâng cao"
+                android:text="@string/advanced"
                 android:textColor="#000000"
                 android:textSize="24sp"
                 android:textStyle="bold" />
@@ -65,7 +65,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Email, SĐT Người Thân"
+                        android:text="@string/emergency_contacts"
                         android:textColor="#000000"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -80,7 +80,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Thêm email, số điện thoại người thân để tự động gửi tin nhắn khi có báo động"
+                    android:text="@string/emergency_contacts_desc"
                     android:textColor="#666666"
                     android:textSize="14sp"
                     android:layout_marginBottom="16dp" />
@@ -102,7 +102,7 @@
                     android:layout_height="48dp"
                     android:layout_marginTop="8dp"
                     android:background="@drawable/button_add_contact"
-                    android:text="+ Thêm người thân"
+                    android:text="@string/add_person"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:textAllCaps="false" />
@@ -142,7 +142,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="Chu kỳ đo"
+                        android:text="@string/check_cycle"
                         android:textColor="#000000"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -151,7 +151,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1 lần đo mỗi"
+                    android:text="@string/check_once_every"
                     android:textColor="#666666"
                     android:textSize="14sp"
                     android:layout_marginBottom="12dp" />
@@ -214,7 +214,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Phút"
+                                android:text="@string/minute"
                                 android:textAlignment="center"
                                 android:textColor="#666666"
                                 android:textSize="14sp" />
@@ -223,7 +223,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Giây"
+                                android:text="@string/second"
                                 android:textAlignment="center"
                                 android:textColor="#666666"
                                 android:textSize="14sp" />
@@ -271,7 +271,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="Ngôn ngữ"
+                        android:text="@string/language"
                         android:textColor="#000000"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -287,7 +287,7 @@
                         android:id="@+id/radioVietnamese"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:text="Tiếng Việt"
+                        android:text="@string/vietnamese"
                         android:textColor="#000000"
                         android:textSize="16sp"
                         android:checked="true"
@@ -297,7 +297,7 @@
                         android:id="@+id/radioEnglish"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
-                        android:text="English"
+                        android:text="@string/english"
                         android:textColor="#000000"
                         android:textSize="16sp"
                         android:buttonTint="#4A7C59" />
@@ -338,7 +338,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
-                        android:text="Thông tin đồng hồ"
+                        android:text="@string/watch_info"
                         android:textColor="#000000"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -349,7 +349,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
-                    android:text="Tên đồng hồ: SmartWatch-3CG"
+                    android:text="@string/watch_name"
                     android:textColor="#666666"
                     android:textSize="15sp" />
 
@@ -357,7 +357,7 @@
                     android:id="@+id/tvWatchVersion"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Phiên bản: v1.1.0"
+                    android:text="@string/watch_version"
                     android:textColor="#666666"
                     android:textSize="15sp" />
             </LinearLayout>

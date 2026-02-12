@@ -32,7 +32,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
+public class MainActivity extends BaseActivity implements SensorEventListener {
     private static final String TAG = "MainActivity";
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final float FALL_THRESHOLD = 25.0f;
@@ -175,7 +175,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
 
         cardFallDetection.setOnClickListener(v -> {
-            Toast.makeText(this, "Cảnh báo vấp ngã đang hoạt động", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.fall_detection_active, Toast.LENGTH_SHORT).show();
         });
 
         cardDisplay.setOnClickListener(v -> {
@@ -226,7 +226,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 tvBatteryStatus.setText("Đã kết nối với " + connectedDeviceName);
             } else if (BLEService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 Toast.makeText(MainActivity.this, "Đã ngắt kết nối", Toast.LENGTH_SHORT).show();
-                tvBatteryStatus.setText("Đã kết nối với đồng hồ của bạn...");
+                tvBatteryStatus.setText(R.string.battery_connected);
             } else if (BLEService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 Log.d(TAG, "Services discovered");
             } else if (BLEService.ACTION_DATA_AVAILABLE.equals(action)) {
@@ -281,7 +281,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void showFallAlert(double magnitude) {
         runOnUiThread(() -> {
             android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-            builder.setTitle("⚠️ Phát hiện té ngã!");
+            builder.setTitle("Phát hiện té ngã!");
             builder.setMessage(String.format("Phát hiện chuyển động mạnh (%.2f m/s²).\n\nBạn có ổn không?", magnitude));
             builder.setPositiveButton("Tôi ổn", (dialog, which) -> {
                 dialog.dismiss();
@@ -317,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void detectFall() {
         runOnUiThread(() -> {
-            Toast.makeText(this, "⚠️ Phát hiện té ngã! Bạn có ổn không?",
+            Toast.makeText(this, "Phát hiện té ngã! Bạn có ổn không?",
                     Toast.LENGTH_LONG).show();
         });
     }
@@ -327,12 +327,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onResume();
         Log.d(TAG, "onResume called");
 
+        // KIỂM TRA NGÔN NGỮ ĐÃ ĐỔI CHƯA
+        String savedLanguage = LocaleHelper.getPersistedLanguage(this);
+        String currentLanguage = getResources().getConfiguration().locale.getLanguage();
+
+        if (!savedLanguage.equals(currentLanguage)) {
+            recreate(); // Tải lại với ngôn ngữ mới
+            return;
+        }
+
+        // CODE CŨ
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer,
                     SensorManager.SENSOR_DELAY_NORMAL);
         }
-
-        // Cập nhật biểu đồ khi quay lại màn hình
         updateCharts();
     }
 

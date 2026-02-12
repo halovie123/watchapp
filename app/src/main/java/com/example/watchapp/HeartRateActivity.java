@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.Random;
 
-public class HeartRateActivity extends AppCompatActivity implements SensorEventListener {
+public class HeartRateActivity extends BaseActivity implements SensorEventListener {
     private TextView tvHeartRate, tvStatus;
     private Button btnMeasure, btnBack;
     private SensorManager sensorManager;
@@ -65,8 +65,8 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
 
     private void stopMeasurement() {
         isMeasuring = false;
-        btnMeasure.setText("Bắt đầu đo");
-        tvStatus.setText("Nhấn nút để đo nhịp tim");
+        btnMeasure.setText(R.string.start_measuring);
+        tvStatus.setText(R.string.press_to_measure);
         sensorManager.unregisterListener(this);
         handler.removeCallbacksAndMessages(null);
     }
@@ -83,11 +83,12 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
                     dataManager.saveHeartRateData(heartRate);
 
                     if (heartRate < 60) {
-                        tvStatus.setText("Nhịp tim thấp");
-                    } else if (heartRate > 100) {
-                        tvStatus.setText("Nhịp tim cao");
+                        tvStatus.setText(R.string.heart_rate_low);
+                    }
+                    else if (heartRate > 100) {
+                        tvStatus.setText("@string/heart_rate_high");
                     } else {
-                        tvStatus.setText("Nhịp tim bình thường");
+                        tvStatus.setText("@string/heart_rate_normal");
                     }
 
                     handler.postDelayed(this, 2000);
@@ -106,11 +107,11 @@ public class HeartRateActivity extends AppCompatActivity implements SensorEventL
             dataManager.saveHeartRateData((int)heartRate);
 
             if (heartRate < 60) {
-                tvStatus.setText("Nhịp tim thấp");
+                tvStatus.setText("@string/heart_rate_low");
             } else if (heartRate > 100) {
-                tvStatus.setText("Nhịp tim cao");
+                tvStatus.setText("@string/heart_rate_high");
             } else {
-                tvStatus.setText("Nhịp tim bình thường");
+                tvStatus.setText("@string/heart_rate_normal");
             }
         }
     }

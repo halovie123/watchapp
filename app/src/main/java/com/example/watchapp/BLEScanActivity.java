@@ -44,7 +44,7 @@ public class BLEScanActivity extends AppCompatActivity {
     private boolean scanning = false;
 
     private RecyclerView recyclerView;
-    private Button btnScan, btnBackToOnboarding;
+    private Button btnScan, btnBackToOnboarding, btnMockEnterMain;
     private ProgressBar progressBar;
     private TextView tvStatus;
 
@@ -70,6 +70,8 @@ public class BLEScanActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerViewDevices);
         btnScan = findViewById(R.id.btnScan);
         btnBackToOnboarding = findViewById(R.id.btnBackToOnboarding);
+        btnMockEnterMain = findViewById(R.id.btnMockEnterMain);
+
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
 
@@ -91,7 +93,28 @@ public class BLEScanActivity extends AppCompatActivity {
             SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
             prefs.edit().putBoolean("hasOnboarded", false).apply();
             finish();
-        });    }
+        });
+
+        btnMockEnterMain.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                // (1) Giả lập đã kết nối BLE
+                SharedPreferences prefs =
+                        getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                prefs.edit()
+                        .putBoolean("ble_connected", true)
+                        .apply();
+
+                // (2) Vào MainActivity
+                Intent intent =
+                        new Intent(BLEScanActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
+        });
+
+    }
 
     private void setupRecyclerView() {
         deviceAdapter = new BLEDeviceAdapter(deviceList, device -> {

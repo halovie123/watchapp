@@ -45,7 +45,7 @@
                     android:id="@+id/tvBatteryStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Đã kết nối với đồng hồ của bạn..."
+                    android:text="@string/battery_connected"
                     android:textAlignment="center"
                     android:textColor="@color/gray"
                     android:textSize="13sp" />
@@ -74,7 +74,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:layout_marginBottom="16dp"
-                android:text="SMART WATCH"
+                android:text="@string/smart_watch"
                 android:textAlignment="center"
                 android:textColor="@color/black"
                 android:textSize="20sp"
@@ -113,7 +113,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="8dp"
-                            android:text="Nhịp tim 24h"
+                            android:text="@string/heart_rate_24h"
                             android:textColor="@color/black"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -139,7 +139,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Trung bình: 72-78 BPM"
+                        android:text="@string/average_range"
                         android:textColor="@color/gray"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -178,7 +178,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="8dp"
-                            android:text="Nồng độ oxy 24h"
+                            android:text="@string/oxygen_24h"
                             android:textColor="@color/black"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -203,7 +203,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Trung bình: 95-98%"
+                        android:text="@string/average_range_oxy"
                         android:textColor="@color/gray"
                         android:textSize="12sp" />
                 </LinearLayout>
@@ -236,7 +236,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_weight="1"
-                        android:text="Nhịp tim"
+                        android:text="@string/heart_rate"
                         android:textColor="@color/gray"
                         android:textSize="16sp" />
 
@@ -274,7 +274,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_weight="1"
-                        android:text="Nồng độ oxy (SpO2)"
+                        android:text="@string/oxygen_level"
                         android:textColor="@color/gray"
                         android:textSize="16sp" />
 
@@ -312,7 +312,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_weight="1"
-                        android:text="Cảnh báo vấp ngã"
+                        android:text="@string/fall_detection"
                         android:textColor="@color/gray"
                         android:textSize="16sp" />
 
@@ -350,7 +350,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_weight="1"
-                        android:text="Hiển thị"
+                        android:text="@string/display"
                         android:textColor="@color/gray"
                         android:textSize="16sp" />
 
@@ -388,7 +388,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="16dp"
                         android:layout_weight="1"
-                        android:text="Nâng cao"
+                        android:text="@string/advanced"
                         android:textColor="@color/gray"
                         android:textSize="16sp" />
 
@@ -415,7 +415,7 @@
         android:src="@drawable/ic_chat"
         app:fabSize="normal"
         app:tint="@android:color/white"
-        app:backgroundTint="#1E88E5"
+        app:backgroundTint="#6B9B7A"
         app:elevation="6dp"
         app:rippleColor="#BBDEFB"
         android:contentDescription="Chat với trợ lý" />

@@ -1,5 +1,6 @@
 package com.example.watchapp;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -11,12 +12,11 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AdvancedSettingsActivity extends AppCompatActivity {
+public class AdvancedSettingsActivity extends BaseActivity {
     private LinearLayout contactsContainer;
     private Button btnAddContact;
     private Button btnBack;
@@ -25,6 +25,8 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
     private RadioGroup radioGroupLanguage;
     private TextView tvWatchName, tvWatchVersion;
     private List<String> emergencyContacts;
+    private boolean isLoadingSettings = false; // Flag để tránh trigger listener khi load
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,8 +36,8 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
         emergencyContacts = new ArrayList<>();
 
         initViews();
-        setupListeners();
-        loadSettings();
+        loadSettings(); // Load trước khi setup listener
+        setupListeners(); // Setup listener sau
     }
 
     private void initViews() {
@@ -69,17 +71,43 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
             int minute = pickerMinute.getValue();
             int second = pickerSecond.getValue();
             saveCheckTime(minute, second);
-            Toast.makeText(this, "Đã lưu chu kỳ đo: " + minute + " phút " + second + " giây",
-                    Toast.LENGTH_SHORT).show();
+            String message = getString(R.string.saved_check_cycle, minute, second);
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
         });
 
         radioGroupLanguage.setOnCheckedChangeListener((group, checkedId) -> {
+            // QUAN TRỌNG: Chỉ xử lý khi KHÔNG đang load settings
+            if (isLoadingSettings) {
+                return;
+            }
+
+            // Lấy ngôn ngữ hiện tại
+            String currentLanguage = LocaleHelper.getPersistedLanguage(this);
+            String newLanguage;
+
             if (checkedId == R.id.radioVietnamese) {
-                saveLanguage("vi");
-                Toast.makeText(this, "Đã chọn Tiếng Việt", Toast.LENGTH_SHORT).show();
+                newLanguage = "vi";
             } else if (checkedId == R.id.radioEnglish) {
-                saveLanguage("en");
-                Toast.makeText(this, "Selected English", Toast.LENGTH_SHORT).show();
+                newLanguage = "en";
+            } else {
+                return; // Không làm gì nếu không phải 2 nút này
+            }
+
+            // QUAN TRỌNG: Chỉ recreate nếu ngôn ngữ THẬT SỰ thay đổi
+            if (!currentLanguage.equals(newLanguage)) {
+                // Lưu ngôn ngữ mới
+                LocaleHelper.setLocale(this, newLanguage);
+
+                // Hiển thị toast
+                String toastMessage = newLanguage.equals("vi")
+                        ? "Đã chọn Tiếng Việt"
+                        : "Selected English";
+                Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show();
+
+                // Delay một chút để toast hiển thị trước khi recreate
+                new android.os.Handler().postDelayed(() -> {
+                    recreate();
+                }, 300);
             }
         });
     }
@@ -92,18 +120,21 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
 
         btnDelete.setOnClickListener(v -> {
             contactsContainer.removeView(contactView);
-            Toast.makeText(this, "Đã xóa người thân", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.contact_deleted, Toast.LENGTH_SHORT).show();
         });
 
         contactsContainer.addView(contactView);
     }
 
     private void loadSettings() {
+        // BẬT flag để tránh trigger listener
+        isLoadingSettings = true;
+
         // Load từ SharedPreferences
         android.content.SharedPreferences prefs = getSharedPreferences("WatchSettings", MODE_PRIVATE);
 
         // Load language
-        String language = prefs.getString("language", "vi");
+        String language = LocaleHelper.getPersistedLanguage(this);
         if (language.equals("vi")) {
             ((RadioButton) findViewById(R.id.radioVietnamese)).setChecked(true);
         } else {
@@ -111,14 +142,20 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
         }
 
         // Load watch info
-        tvWatchName.setText("Tên đồng hồ: " + prefs.getString("watchName", "SmartWatch-3CG"));
-        tvWatchVersion.setText("Phiên bản: " + prefs.getString("watchVersion", "v1.1.0"));
+        String watchName = prefs.getString("watchName", "SmartWatch-3CG");
+        String watchVersion = prefs.getString("watchVersion", "v1.1.0");
+
+        tvWatchName.setText(getString(R.string.watch_name, watchName));
+        tvWatchVersion.setText(getString(R.string.watch_version, watchVersion));
 
         // Load time (phút và giây)
         int minute = prefs.getInt("checkMinute", 30);
         int second = prefs.getInt("checkSecond", 0);
         pickerMinute.setValue(minute);
         pickerSecond.setValue(second);
+
+        // TẮT flag sau khi load xong
+        isLoadingSettings = false;
     }
 
     private void saveCheckTime(int minute, int second) {
@@ -126,13 +163,6 @@ public class AdvancedSettingsActivity extends AppCompatActivity {
         prefs.edit()
                 .putInt("checkMinute", minute)
                 .putInt("checkSecond", second)
-                .apply();
-    }
-
-    private void saveLanguage(String language) {
-        android.content.SharedPreferences prefs = getSharedPreferences("WatchSettings", MODE_PRIVATE);
-        prefs.edit()
-                .putString("language", language)
                 .apply();
     }
 }
