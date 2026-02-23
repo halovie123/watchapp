@@ -149,8 +149,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     private void updateDateTime() {
-        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
-        SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, dd MMMM yyyy", new Locale("vi"));
+        Locale currentLocale = getResources().getConfiguration().locale;
+
+        SimpleDateFormat timeFormat =
+                new SimpleDateFormat("HH:mm", currentLocale);
+
+        SimpleDateFormat dateFormat =
+                new SimpleDateFormat("EEEE, dd MMMM yyyy", currentLocale);
 
         Date now = new Date();
         tvTime.setText(timeFormat.format(now));

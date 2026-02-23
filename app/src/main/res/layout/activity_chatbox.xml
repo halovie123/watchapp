@@ -36,7 +36,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Trợ lý sức khỏe"
+                android:text="@string/chatbox_title"
                 android:textColor="@android:color/white"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -44,7 +44,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Luôn sẵn sàng hỗ trợ bạn"
+                android:text="@string/chatbox_desc"
                 android:textColor="#E0F2F1"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -156,7 +156,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@android:color/transparent"
-                    android:hint="Nhập tin nhắn..."
+                    android:hint="@string/message"
                     android:imeOptions="actionSend"
                     android:inputType="textCapSentences|textMultiLine"
                     android:maxLines="4"
@@ -206,7 +206,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
                     android:layout_marginEnd="8dp"
-                    android:text="💓 Nhịp tim"
+                    android:text="@string/heart"
                     android:textSize="12sp" />
 
                 <Button
@@ -215,7 +215,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
                     android:layout_marginEnd="8dp"
-                    android:text="🫁 Oxy"
+                    android:text="@string/oxy"
                     android:textSize="12sp" />
 
                 <Button
@@ -224,7 +224,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
                     android:layout_marginEnd="8dp"
-                    android:text="💡 Mẹo"
+                    android:text="@string/tips"
                     android:textSize="12sp" />
 
                 <Button
@@ -232,7 +232,7 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
-                    android:text=" Giúp"
+                    android:text="@string/help"
                     android:textSize="12sp" />
             </LinearLayout>
         </HorizontalScrollView>

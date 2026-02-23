@@ -6,10 +6,24 @@
     <string name="get_started">Get started</string>
     <string name="onboarding_title">Smart Health Watch\nfor the Modern Lifestyle</string>
     <string name="onboarding_desc">Discover the Design and technology of a Smart Health Monitoring Watch.</string>
+    <string name="onboarding_title1">Track Your Health</string>
+    <string name="onboarding_desc1">Monitor your heart rate and oxygen levels in real-time.</string>
+    <string name="onboarding_title2">Stay Safe</string>
+    <string name="onboarding_desc2">Fall detection alerts to keep you protected.</string>
+
+    <!-- BLE -->
+    <string name="tap_scan_devices">Tap SCAN DEVICES to get started.</string>
+    <string name="scan_devices">SCAN DEVICES</string>
+    <string name="back">BACK</string>
+    <string name="stop_scan">Stop scan</string>
+    <string name="scanning_ble_devices">Scanning BLE devices...</string>
+    <string name="found">Found</string>
+    <string name="devices">devices</string>
 
     <!-- Main Screen -->
     <string name="smart_watch">SMART WATCH</string>
     <string name="battery_connected">Connected to your watch ...</string>
+    <string name="day">WED, JAN 15 2026</string>
     <string name="heart_rate">Heart Rate</string>
     <string name="oxygen_level">Oxygen Level</string>
     <string name="fall_detection">Fall Detection</string>
@@ -62,8 +76,83 @@
     <string name="watch_name">Watch name: SmartWatch-3CG</string>
     <string name="watch_version">Version: v1.1.0</string>
 
+    <!-- ChatBox AI -->
+    <string name="chatbox_title">Health Assistant</string>
+    <string name="chatbox_desc">Always ready to support you</string>
+    <string name="message">Enter message</string>
+    <string name="heart">💓 Heart Rate</string>
+    <string name="oxy">🫁 Oxygen</string>
+    <string name="tips">💡 Tips</string>
+    <string name="help">Help</string>
+
+    <string name="user_message">Message from user</string>
+    <string name="message_from_assistant">Message from assistant</string>
+    <string name="chatbot_welcome">Hello! I am your health assistant. How can I help you? 🤖</string>
+
+    <string name="need_audio_permission">Audio permission required</string>
+    <string name="audio_permission_granted">Audio permission granted</string>
+    <string name="audio_permission_required">Audio permission is required to use voice feature</string>
+
+    <string name="error_audio">Audio error</string>
+    <string name="error_client">Client error</string>
+    <string name="error_permission">Permission denied</string>
+    <string name="error_network">Network error</string>
+    <string name="error_network_timeout">Network timeout</string>
+    <string name="error_no_match">No speech recognized</string>
+    <string name="error_busy">Recognizer busy</string>
+    <string name="error_server">Server error</string>
+    <string name="error_speech_timeout">No speech input detected</string>
+    <string name="error_unknown">Unknown error</string>
+
+    <string name="heart_status_low">lower than normal</string>
+    <string name="heart_status_high">higher than normal</string>
+    <string name="heart_status_normal">within the normal range</string>
+    <string name="heart_with_data">Your average heart rate is %1$d BPM (%2$s).\nI have tracked %3$d measurements over the past 24 hours.\nA normal resting heart rate is 60–100 BPM.</string>
+    <string name="heart_no_data">No heart rate data is available at the moment.\nPlease measure your heart rate so I can analyze it for you.\nA normal resting heart rate is 60–100 BPM.</string>
+
+    <string name="oxygen_status_low">low, needs monitoring</string>
+    <string name="oxygen_status_normal">normal</string>
+    <string name="oxygen_status_range">within the measured range</string>
+
+    <string name="oxygen_with_data">Your average oxygen level is %1$d%% (%2$s).\nI have tracked %3$d measurements over the past 24 hours.\nNormal SpO₂ ranges from 95–100%%. If it falls below 92%%, please monitor closely.</string>
+    <string name="oxygen_no_data">No oxygen level data is available at the moment.\nPlease measure SpO₂ so I can analyze it for you.\nNormal SpO₂ ranges from 95–100%%.</string>
+
+    <string name="fall_advice">If you have just fallen:\n1. Sit still and assess your condition\n2. Check for any injuries\n3. If you feel pain or dizziness, call for help\n4. The watch has automatic fall detection and will notify your family if needed.</string>
+
+    <string name="sleep_advice">About sleep:\n✓ Adults should sleep 7–8 hours per day\n✓ Go to bed and wake up at the same time each day\n✓ Avoid screens 1 hour before bedtime\n✓ Keep the bedroom dark, cool, and quiet\n✓ Avoid caffeine after 2 PM</string>
+
+    <string name="tips_intro">Here are some health tips for you:</string>
+
+    <string-array name="health_tips">
+        <item>💧 Drink at least 2 liters of water each day to maintain good health.</item>
+        <item>🚶 Walk for at least 30 minutes daily to improve circulation.</item>
+        <item>🥗 Eat more green vegetables and fresh fruits.</item>
+        <item>😴 Get 7-8 hours of sleep each night to help your body recover.</item>
+        <item>🧘 Practice meditation or yoga to reduce stress.</item>
+        <item>📱 Reduce screen time and rest your eyes for 20 seconds every 20 minutes.</item>
+        <item>💪 Do light exercise daily to improve cardiovascular health.</item>
+    </string-array>
+
+    <string name="bot_functions">I can help you with:\n💓 Tracking and analyzing heart rate\n🫁 Monitoring oxygen levels (SpO₂)\n🚨 Fall detection alerts\n💡 Providing health tips\n📊 Analyzing your health data\n😴 Sleep advice\nYou can ask me anything about your health!</string>
+
+    <string name="bot_greeting">Hello! Nice to meet you.\nI am your smart health assistant.\nHow can I help you with your health today? 😊</string>
+
+    <string name="bot_thanks">You are welcome! I am always here to help.\nTake good care of your health! 😊</string>
+
+    <string name="health_summary">Based on your data:\n💓 Average heart rate: %1$d BPM\n🫁 Oxygen level: %2$d%%\nOverall, your indicators look good.\nKeep up a healthy lifestyle!</string>
+
+    <string name="health_need_data">I need more data to assess your health.\nPlease measure your heart rate and oxygen level so I can provide better analysis.</string>
+
+    <string name="bot_default">I understand you are asking about "%1$s".\nYou can ask me about:\n• Heart rate\n• Oxygen level (SpO₂)\n• Falls\n• Sleep\n• Health tips\nOr say \"help me\" to see all features! 😊</string>
+
+    <string name="quick_heart">How is my heart rate?</string>
+    <string name="quick_oxygen">My oxygen level</string>
+    <string name="quick_tips">Give me a health tip</string>
+    <string name="quick_help">Help me</string>
+
     <!-- Toast Messages -->
-    <string name="fall_detected">⚠️ Fall detected! Are you okay?</string>
+    <string name="fall_detected">Fall detected! Are you okay?</string>
     <string name="fall_detection_active">Fall detection is active</string>
     <string name="display_settings">Display settings</string>
+
 </resources>

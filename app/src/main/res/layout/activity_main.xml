@@ -63,7 +63,7 @@
                     android:id="@+id/tvDate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Thứ Tư, 15 Tháng 1 2025"
+                    android:text="@string/day"
                     android:textColor="@color/gray"
                     android:textSize="14sp" />
             </LinearLayout>

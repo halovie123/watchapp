@@ -32,7 +32,7 @@
                 android:id="@+id/tvBotMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tin nhắn từ trợ lý"
+                android:text="@string/message_from_assistant"
                 android:textColor="@color/black"
                 android:textSize="14sp"
                 android:maxWidth="240dp" />

@@ -41,18 +41,18 @@ public class OnboardingFragment extends Fragment {
         switch (position) {
             case 0:
                 imageView.setImageResource(R.drawable.watch_image);
-                title.setText("Smart Health Watch\nfor the Modern Lifestyle");
-                description.setText("Discover the Design and technology of a Smart Health Monitoring Watch.");
+                title.setText(R.string.onboarding_title);
+                description.setText(R.string.onboarding_desc);
                 break;
             case 1:
                 imageView.setImageResource(R.drawable._watch);
-                title.setText("Track Your Health");
-                description.setText("Monitor your heart rate and oxygen levels in real-time.");
+                title.setText(R.string.onboarding_title1);
+                description.setText(R.string.onboarding_desc1);
                 break;
             case 2:
                 imageView.setImageResource(R.drawable.heartrate);
-                title.setText("Stay Safe");
-                description.setText("Fall detection alerts to keep you protected.");
+                title.setText(R.string.onboarding_title2);
+                description.setText(R.string.onboarding_desc2);
                 break;
         }
     }

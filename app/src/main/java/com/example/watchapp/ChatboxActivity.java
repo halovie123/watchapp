@@ -27,7 +27,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class ChatboxActivity extends AppCompatActivity {
+public class ChatboxActivity extends BaseActivity {
     private LinearLayout chatContainer;
     private ScrollView chatScrollView;
     private EditText edtMessage;
@@ -63,9 +63,23 @@ public class ChatboxActivity extends AppCompatActivity {
         setupListeners();
 
         // Hiển thị tin nhắn chào mừng
-        addBotMessage("Xin chào! Tôi là trợ lý sức khỏe của bạn. Tôi có thể giúp gì cho bạn? 🤖");
+        addBotMessage(getString(R.string.chatbot_welcome));
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Kiểm tra ngôn ngữ
+        String savedLanguage = LocaleHelper.getPersistedLanguage(this);
+        String currentLanguage = getResources().getConfiguration().locale.getLanguage();
+
+        if (!savedLanguage.equals(currentLanguage)) {
+            recreate();
+            return;
+        }
+
+    }
     private void initViews() {
         chatContainer = findViewById(R.id.chatContainer);
         chatScrollView = findViewById(R.id.chatScrollView);
@@ -193,10 +207,10 @@ public class ChatboxActivity extends AppCompatActivity {
         });
 
         // Quick replies
-        btnQuickReply1.setOnClickListener(v -> sendMessage("Nhịp tim của tôi như thế nào?"));
-        btnQuickReply2.setOnClickListener(v -> sendMessage("Nồng độ oxy của tôi"));
-        btnQuickReply3.setOnClickListener(v -> sendMessage("Cho tôi mẹo sức khỏe"));
-        btnQuickReply4.setOnClickListener(v -> sendMessage("Giúp tôi"));
+        btnQuickReply1.setOnClickListener(v -> sendMessage(getString(R.string.quick_heart)));
+        btnQuickReply2.setOnClickListener(v -> sendMessage(getString(R.string.quick_oxygen)));
+        btnQuickReply3.setOnClickListener(v -> sendMessage(getString(R.string.quick_tips)));
+        btnQuickReply4.setOnClickListener(v -> sendMessage(getString(R.string.quick_help)));
 
         // Send on Enter key
         edtMessage.setOnEditorActionListener((v, actionId, event) -> {
@@ -212,7 +226,7 @@ public class ChatboxActivity extends AppCompatActivity {
     private void startRecording() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "Cần quyền ghi âm", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.need_audio_permission, Toast.LENGTH_SHORT).show();
             checkPermissions();
             return;
         }
@@ -257,25 +271,25 @@ public class ChatboxActivity extends AppCompatActivity {
     private String getErrorMessage(int error) {
         switch (error) {
             case SpeechRecognizer.ERROR_AUDIO:
-                return "Lỗi âm thanh";
+                return getString(R.string.error_audio);
             case SpeechRecognizer.ERROR_CLIENT:
-                return "Lỗi client";
+                return getString(R.string.error_client);
             case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
-                return "Không đủ quyền";
+                return getString(R.string.error_permission);
             case SpeechRecognizer.ERROR_NETWORK:
-                return "Lỗi mạng";
+                return getString(R.string.error_network);
             case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
-                return "Hết thời gian chờ mạng";
+                return getString(R.string.error_network_timeout);
             case SpeechRecognizer.ERROR_NO_MATCH:
-                return "Không nhận diện được giọng nói";
+                return getString(R.string.error_no_match);
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-                return "Đang bận";
+                return getString(R.string.error_busy);
             case SpeechRecognizer.ERROR_SERVER:
-                return "Lỗi server";
+                return getString(R.string.error_server);
             case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
-                return "Không có giọng nói được phát hiện";
+                return getString(R.string.error_speech_timeout);
             default:
-                return "Lỗi không xác định";
+                return getString(R.string.error_unknown);
         }
     }
 
@@ -343,20 +357,17 @@ public class ChatboxActivity extends AppCompatActivity {
             if (avgHeartRate > 0) {
                 String status = "";
                 if (avgHeartRate < 60) {
-                    status = "thấp hơn bình thường";
+                    status = getString(R.string.heart_status_low);
                 } else if (avgHeartRate > 100) {
-                    status = "cao hơn bình thường";
+                    status = getString(R.string.heart_status_high);
                 } else {
-                    status = "trong khoảng bình thường";
+                    status = getString(R.string.heart_status_normal);
                 }
 
-                return String.format("Nhịp tim trung bình của bạn là %d BPM (%s). " +
-                                "Tôi đã theo dõi %d lần đo trong 24 giờ qua. " +
-                                "Nhịp tim bình thường khi nghỉ là 60-100 BPM.",
+                return getString(R.string.heart_with_data,
                         avgHeartRate, status, heartData.size());
             } else {
-                return "Hiện tại chưa có dữ liệu nhịp tim. Hãy đo nhịp tim để tôi có thể phân tích cho bạn. " +
-                        "Nhịp tim bình thường khi nghỉ là 60-100 BPM.";
+                return getString(R.string.heart_no_data);
             }
         }
 
@@ -368,78 +379,50 @@ public class ChatboxActivity extends AppCompatActivity {
             if (avgOxygen > 0) {
                 String status = "";
                 if (avgOxygen < 95) {
-                    status = "thấp, cần theo dõi";
+                    status = getString(R.string.oxygen_status_low);
                 } else if (avgOxygen >= 95 && avgOxygen <= 100) {
-                    status = "bình thường";
+                    status = getString(R.string.oxygen_status_normal);
                 } else {
-                    status = "trong khoảng đo";
+                    status = getString(R.string.oxygen_status_range);
                 }
 
-                return String.format("Nồng độ oxy trung bình của bạn là %d%% (%s). " +
-                                "Tôi đã theo dõi %d lần đo trong 24 giờ qua. " +
-                                "SpO2 bình thường từ 95-100%%. Nếu dưới 92%% hãy theo dõi kỹ.",
+                return getString(R.string.oxygen_with_data,
                         avgOxygen, status, oxygenData.size());
             } else {
-                return "Hiện tại chưa có dữ liệu nồng độ oxy. Hãy đo SpO2 để tôi có thể phân tích cho bạn. " +
-                        "SpO2 bình thường từ 95-100%.";
+                return getString(R.string.oxygen_no_data);
             }
         }
 
         // Câu hỏi về té ngã
         if (msg.contains("té") || msg.contains("ngã") || msg.contains("vấp") || msg.contains("fall")) {
-            return "Nếu bạn vừa bị té ngã:\n" +
-                    "1. Hãy ngồi yên và đánh giá tình trạng\n" +
-                    "2. Kiểm tra xem có bị thương không\n" +
-                    "3. Nếu có đau hoặc chóng mặt, hãy gọi trợ giúp\n" +
-                    "4. Đồng hồ có tính năng phát hiện té ngã tự động và sẽ thông báo cho người thân nếu cần.";
+            return getString(R.string.fall_advice);
         }
 
         // Câu hỏi về giấc ngủ
         if (msg.contains("ngủ") || msg.contains("sleep") || msg.contains("mệt") || msg.contains("tired")) {
-            return "Về giấc ngủ:\n" +
-                    "✓ Người trưởng thành nên ngủ 7-8 tiếng mỗi ngày\n" +
-                    "✓ Đi ngủ và thức dậy đúng giờ\n" +
-                    "✓ Tránh màn hình 1 giờ trước khi ngủ\n" +
-                    "✓ Phòng ngủ tối, mát và yên tĩnh\n" +
-                    "✓ Tránh caffeine sau 2 giờ chiều";
+            return getString(R.string.sleep_advice);
         }
 
         // Mẹo sức khỏe
         if (msg.contains("mẹo") || msg.contains("tip") || msg.contains("lời khuyên") || msg.contains("advice")) {
-            String[] tips = {
-                    "💧 Uống đủ 2 lít nước mỗi ngày để duy trì sức khỏe tốt.",
-                    "🚶 Đi bộ ít nhất 30 phút mỗi ngày giúp cải thiện tuần hoàn.",
-                    "🥗 Ăn nhiều rau xanh và trái cây tươi.",
-                    "😴 Ngủ đủ 7-8 tiếng mỗi đêm để cơ thể phục hồi.",
-                    "🧘 Thực hành thiền định hoặc yoga giúp giảm stress.",
-                    "📱 Giảm thời gian nhìn màn hình, nghỉ ngơi mắt 20 giây sau mỗi 20 phút.",
-                    "💪 Vận động nhẹ nhàng mỗi ngày giúp tăng cường sức khỏe tim mạch."
-            };
+            String[] tips = getResources().getStringArray(R.array.health_tips);
             int randomIndex = (int) (Math.random() * tips.length);
-            return "Đây là mẹo sức khỏe cho bạn:\n\n" + tips[randomIndex];
+            return getString(R.string.tips_intro) + tips[randomIndex];
         }
 
         // Câu hỏi về chức năng
         if (msg.contains("giúp") || msg.contains("help") || msg.contains("làm gì") || msg.contains("can do") || msg.contains("chức năng")) {
-            return "Tôi có thể giúp bạn:\n\n" +
-                    "💓 Theo dõi và phân tích nhịp tim\n" +
-                    "🫁 Theo dõi nồng độ oxy (SpO2)\n" +
-                    "🚨 Cảnh báo té ngã\n" +
-                    "💡 Cung cấp mẹo sức khỏe\n" +
-                    "📊 Phân tích dữ liệu sức khỏe của bạn\n" +
-                    "😴 Tư vấn về giấc ngủ\n\n" +
-                    "Bạn có thể hỏi tôi bất cứ điều gì về sức khỏe!";
+            return getString(R.string.bot_functions);
         }
 
         // Lời chào
         if (msg.contains("xin chào") || msg.contains("hi") || msg.contains("hello") || msg.contains("chào")) {
-            return "Xin chào! Rất vui được gặp bạn. Tôi là trợ lý sức khỏe thông minh. " +
-                    "Bạn cần tôi giúp gì về sức khỏe của bạn không? 😊";
+            return getString(R.string.bot_greeting);
         }
 
         // Cảm ơn
         if (msg.contains("cảm ơn") || msg.contains("thanks") || msg.contains("thank")) {
-            return "Không có gì! Tôi luôn sẵn sàng giúp đỡ bạn. Hãy chăm sóc sức khỏe nhé! 😊";
+            return getString(R.string.bot_thanks);
         }
 
         // Câu hỏi về sức khỏe tổng quát
@@ -447,28 +430,15 @@ public class ChatboxActivity extends AppCompatActivity {
             int avgHeartRate = dataManager.getAverageHeartRate();
             int avgOxygen = dataManager.getAverageOxygen();
 
-            if (avgHeartRate > 0 && avgOxygen > 0) {
-                return String.format("Dựa trên dữ liệu của bạn:\n\n" +
-                                "💓 Nhịp tim trung bình: %d BPM\n" +
-                                "🫁 Nồng độ oxy: %d%%\n\n" +
-                                "Các chỉ số của bạn nhìn chung ổn. Hãy tiếp tục duy trì lối sống lành mạnh!",
-                        avgHeartRate, avgOxygen);
-            } else {
-                return "Tôi cần thêm dữ liệu để đánh giá sức khỏe của bạn. " +
-                        "Hãy đo nhịp tim và nồng độ oxy để tôi có thể phân tích tốt hơn.";
-            }
+            return getString(R.string.health_summary,
+                    avgHeartRate, avgOxygen);
         }
 
         // Mặc định
-        return "Tôi hiểu bạn đang hỏi về \"" + msg + "\". " +
-                "Bạn có thể hỏi tôi về:\n" +
-                "• Nhịp tim\n" +
-                "• Nồng độ oxy (SpO2)\n" +
-                "• Té ngã\n" +
-                "• Giấc ngủ\n" +
-                "• Mẹo sức khỏe\n\n" +
-                "Hoặc nói \"giúp tôi\" để xem tất cả chức năng! 😊";
-    }
+        return String.format(getString(R.string.bot_default), msg);
+        }
+
+
 
     @Override
     protected void onDestroy() {
@@ -490,9 +460,9 @@ public class ChatboxActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Đã cấp quyền ghi âm", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getString(R.string.audio_permission_granted), Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(this, "Cần quyền ghi âm để sử dụng tính năng giọng nói", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.audio_permission_required), Toast.LENGTH_LONG).show();
             }
         }
     }

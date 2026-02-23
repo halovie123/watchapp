@@ -31,7 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BLEScanActivity extends AppCompatActivity {
+public class BLEScanActivity extends BaseActivity {
     private static final String TAG = "BLEScanActivity";
     private static final int PERMISSION_REQUEST_CODE = 101;
     private static final long SCAN_PERIOD = 10000; // 10 giây
@@ -64,6 +64,19 @@ public class BLEScanActivity extends AppCompatActivity {
         // Bind BLE Service
         Intent serviceIntent = new Intent(this, BLEService.class);
         bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        String savedLanguage = LocaleHelper.getPersistedLanguage(this);
+        String currentLanguage = getResources().getConfiguration().locale.getLanguage();
+
+        if (!savedLanguage.equals(currentLanguage)) {
+            recreate();
+            return;
+        }
     }
 
     private void initViews() {
@@ -203,9 +216,9 @@ public class BLEScanActivity extends AppCompatActivity {
         }
 
         scanning = true;
-        btnScan.setText("Dừng quét");
+        btnScan.setText(R.string.stop_scan);
         progressBar.setVisibility(View.VISIBLE);
-        tvStatus.setText("Đang quét thiết bị BLE...");
+        tvStatus.setText(R.string.scanning_ble_devices);
 
         bleScanner.startScan(scanCallback);
 
@@ -227,9 +240,9 @@ public class BLEScanActivity extends AppCompatActivity {
         }
 
         scanning = false;
-        btnScan.setText("Quét thiết bị");
+        btnScan.setText(R.string.scan_devices);
         progressBar.setVisibility(View.GONE);
-        tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
+        tvStatus.setText(R.string.found + deviceList.size() + R.string.devices);
 
         Log.d(TAG, "Stopped BLE scan");
     }
@@ -282,7 +295,7 @@ public class BLEScanActivity extends AppCompatActivity {
             if (!deviceExists) {
                 deviceList.add(device);
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
-                tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
+                tvStatus.setText(R.string.found + deviceList.size() + R.string.devices);
                 Log.d(TAG, "Added device: " + deviceAddress);
             }
         }

@@ -26,7 +26,7 @@
                 android:id="@+id/tvUserMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tin nhắn của người dùng"
+                android:text="@string/user_message"
                 android:textColor="@android:color/white"
                 android:textSize="14sp"
                 android:maxWidth="240dp" />
