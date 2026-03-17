@@ -44,6 +44,13 @@
     <string name="heart_rate_low">Heart rate low</string>
     <string name="heart_rate_high">Heart rate high</string>
     <string name="heart_rate_normal">Heart rate normal</string>
+    <string name="heart_rate_waiting">Place wrist on sensor…</string>
+    <string name="heart_rate_motion_warning">Motion detected — data may be inaccurate</string>
+    <string name="ble_connected">Watch connected</string>
+    <string name="ble_disconnected">Watch not connected</string>
+    <string name="data_parse_error">Sensor data error</string>
+    <string name="history_24h">24-Hour History</string>
+    <string name="average_value">Average: %d</string>
 
     <!-- Oxygen -->
     <string name="measure_oxygen">Measure Oxygen Level</string>
@@ -51,6 +58,9 @@
     <string name="press_to_measure_spo2">Press button to measure SpO2</string>
     <string name="oxygen_low">Oxygen level low</string>
     <string name="oxygen_normal">Oxygen level normal</string>
+    <string name="oxygen_waiting">Place wrist on sensor…</string>
+    <string name="oxygen_critical">SpO₂ critical — below 90%%</string>
+    <string name="oxygen_motion_warning">Motion detected — data may be inaccurate</string>
 
     <!-- Advanced Settings -->
     <string name="emergency_contacts">Emergency Contacts</string>

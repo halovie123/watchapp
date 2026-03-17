@@ -31,7 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BLEScanActivity extends BaseActivity {
+public class BLEScanActivity extends AppCompatActivity {
     private static final String TAG = "BLEScanActivity";
     private static final int PERMISSION_REQUEST_CODE = 101;
     private static final long SCAN_PERIOD = 10000; // 10 giây
@@ -216,9 +216,9 @@ public class BLEScanActivity extends BaseActivity {
         }
 
         scanning = true;
-        btnScan.setText(R.string.stop_scan);
+        btnScan.setText("Dừng quét");
         progressBar.setVisibility(View.VISIBLE);
-        tvStatus.setText(R.string.scanning_ble_devices);
+        tvStatus.setText("Đang quét thiết bị BLE...");
 
         bleScanner.startScan(scanCallback);
 
@@ -255,28 +255,35 @@ public class BLEScanActivity extends BaseActivity {
 
             BluetoothDevice device = result.getDevice();
 
-            // Log devices - PHẢI kiểm tra permission trước
-            String deviceName = "Unknown";
-            String deviceAddress = "Unknown";
+            // Lấy tên device
+            String deviceName = null;
+            String deviceAddress = null;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
                         Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                    deviceName = device.getName() != null ? device.getName() : "Unknown";
+                    deviceName = device.getName();
                     deviceAddress = device.getAddress();
                     Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
                 }
             } else {
-                deviceName = device.getName() != null ? device.getName() : "Unknown";
+                deviceName = device.getName();
                 deviceAddress = device.getAddress();
-                Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
             }
+
+            // ===== THAY ĐỔI: Bỏ qua device không có tên =====
+            if (deviceName == null || deviceName.trim().isEmpty()) {
+                Log.d(TAG, "Skipping unnamed device: " + deviceAddress);
+                return; // Không thêm vào list
+            }
+
+            Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
 
             // Kiểm tra xem device đã có trong list chưa
             boolean deviceExists = false;
             for (BluetoothDevice d : deviceList) {
-                // Also need permission check here
-                String existingAddress = "Unknown";
+                String existingAddress = null;
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
                             Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
@@ -286,7 +293,7 @@ public class BLEScanActivity extends BaseActivity {
                     existingAddress = d.getAddress();
                 }
 
-                if (existingAddress.equals(deviceAddress)) {
+                if (existingAddress != null && existingAddress.equals(deviceAddress)) {
                     deviceExists = true;
                     break;
                 }
@@ -297,6 +304,8 @@ public class BLEScanActivity extends BaseActivity {
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
                 tvStatus.setText(R.string.found + deviceList.size() + R.string.devices);
                 Log.d(TAG, "Added device: " + deviceAddress);
+                tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
+                Log.d(TAG, "Added device: " + deviceName + " (" + deviceAddress + ")");
             }
         }
 

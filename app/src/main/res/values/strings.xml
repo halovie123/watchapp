@@ -44,6 +44,13 @@
     <string name="heart_rate_low">Nhịp tim thấp</string>
     <string name="heart_rate_high">Nhịp tim cao</string>
     <string name="heart_rate_normal">Nhịp tim bình thường</string>
+    <string name="heart_rate_waiting">Đặt cổ tay vào cảm biến…</string>
+    <string name="heart_rate_motion_warning">Phát hiện chuyển động — dữ liệu có thể không chính xác</string>
+    <string name="ble_connected">Đồng hồ đã kết nối</string>
+    <string name="ble_disconnected">Chưa kết nối đồng hồ</string>
+    <string name="data_parse_error">Lỗi đọc dữ liệu cảm biến</string>
+    <string name="history_24h">Lịch sử 24 giờ</string>
+    <string name="average_value">Trung bình: %d</string>
 
     <!-- Oxygen -->
     <string name="measure_oxygen">Đo nồng độ oxy</string>
@@ -51,6 +58,9 @@
     <string name="press_to_measure_spo2">Nhấn nút để đo SpO2</string>
     <string name="oxygen_low">Nồng độ oxy thấp</string>
     <string name="oxygen_normal">Nồng độ oxy bình thường</string>
+    <string name="oxygen_waiting">Đặt cổ tay vào cảm biến…</string>
+    <string name="oxygen_critical">SpO₂ nguy hiểm — dưới 90%%</string>
+    <string name="oxygen_motion_warning">Phát hiện chuyển động — dữ liệu có thể không chính xác</string>
 
     <!-- Advanced Settings -->
     <string name="emergency_contacts">Email, SĐT Người Thân</string>

@@ -1,127 +1,142 @@
 package com.example.watchapp;
 
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Handler;
-import android.widget.Button;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.List;
 
-import java.util.Random;
+/**
+ * HeartRateActivity — displays real-time HR data streamed from ESP32 via BLE.
+ * No manual measure button; data arrives automatically from BLEService.
+ */
+public class HeartRateActivity extends BaseActivity {
 
-public class HeartRateActivity extends BaseActivity implements SensorEventListener {
-    private TextView tvHeartRate, tvStatus;
-    private Button btnMeasure, btnBack;
-    private SensorManager sensorManager;
-    private Sensor heartRateSensor;
-    private boolean isMeasuring = false;
-    private Handler handler;
-    private Random random;
+    private TextView tvHeartRate;
+    private TextView tvStatus;
+    private TextView tvAverage;
+    private ChartView chartView;
     private HealthDataManager dataManager;
 
+    // ─── BLE Broadcast Receiver ──────────────────────────────
+    private final BroadcastReceiver bleReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action == null) return;
+
+            switch (action) {
+                case BLEService.ACTION_GATT_CONNECTED:
+                    tvStatus.setText(R.string.ble_connected);
+                    break;
+
+                case BLEService.ACTION_GATT_DISCONNECTED:
+                    tvStatus.setText(R.string.ble_disconnected);
+                    tvHeartRate.setText("--");
+                    break;
+
+                case BLEService.ACTION_DATA_AVAILABLE:
+                    String json = intent.getStringExtra(BLEService.EXTRA_DATA);
+                    if (json != null) handleSensorData(json);
+                    break;
+            }
+        }
+    };
+
+    // ─── Lifecycle ────────────────────────────────────────────
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_heart_rate);
 
-        tvHeartRate = findViewById(R.id.tvHeartRate);
-        tvStatus = findViewById(R.id.tvStatus);
-        btnMeasure = findViewById(R.id.btnMeasure);
-        btnBack = findViewById(R.id.btnBack);
-
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
-        handler = new Handler();
-        random = new Random();
         dataManager = HealthDataManager.getInstance(this);
 
-        btnMeasure.setOnClickListener(v -> {
-            if (!isMeasuring) {
-                startMeasurement();
-            } else {
-                stopMeasurement();
-            }
-        });
+        tvHeartRate = findViewById(R.id.tvHeartRate);
+        tvStatus    = findViewById(R.id.tvStatus);
+        tvAverage   = findViewById(R.id.tvAverage);
+        chartView   = findViewById(R.id.chartView);
 
-        btnBack.setOnClickListener(v -> finish());
+        // Back button
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+
+        // Initial chart render with stored history
+        refreshChart();
     }
 
-    private void startMeasurement() {
-        isMeasuring = true;
-        btnMeasure.setText("Dừng đo");
-        tvStatus.setText("Đang đo nhịp tim...");
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BLEService.ACTION_GATT_CONNECTED);
+        filter.addAction(BLEService.ACTION_GATT_DISCONNECTED);
+        filter.addAction(BLEService.ACTION_DATA_AVAILABLE);
+        LocalBroadcastManager.getInstance(this).registerReceiver(bleReceiver, filter);
+    }
 
-        if (heartRateSensor != null) {
-            sensorManager.registerListener(this, heartRateSensor,
-                    SensorManager.SENSOR_DELAY_NORMAL);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(bleReceiver);
+    }
+
+    // ─── Data handling ────────────────────────────────────────
+    private void handleSensorData(String jsonString) {
+        try {
+            JSONObject json = new JSONObject(jsonString);
+
+            if (!json.has("heartRate")) return;
+            int hr = json.getInt("heartRate");
+
+            // -1 means algorithm has no valid result yet (finger not placed etc.)
+            if (hr < 0) {
+                tvHeartRate.setText("--");
+                tvStatus.setText(R.string.heart_rate_waiting);
+                return;
+            }
+
+            // Display live value
+            tvHeartRate.setText(hr + " BPM");
+
+            // Status based on physiological range
+            if (hr < 60) {
+                tvStatus.setText(R.string.heart_rate_low);
+            } else if (hr > 100) {
+                tvStatus.setText(R.string.heart_rate_high);
+            } else {
+                tvStatus.setText(R.string.heart_rate_normal);
+            }
+
+            // Show motion warning if significant noise was detected
+            if (json.has("motionPct") && json.getInt("motionPct") > 50) {
+                tvStatus.setText(R.string.heart_rate_motion_warning);
+            }
+
+            // Update chart and average (data already saved by BLEService →
+            //   HealthDataManager.saveHeartRateData)
+            refreshChart();
+
+        } catch (JSONException e) {
+            tvStatus.setText(R.string.data_parse_error);
+        }
+    }
+
+    private void refreshChart() {
+        List<HealthDataManager.HealthDataPoint> data = dataManager.getHeartRateData();
+
+        // Chart: red line, range 40–180 bpm
+        chartView.setData(data, 0xFFE53935, 40, 180);
+
+        // Average
+        int avg = dataManager.getAverageHeartRate();
+        if (avg > 0) {
+            tvAverage.setText(getString(R.string.average_value, avg) + " BPM");
         } else {
-            // Mô phỏng nếu không có cảm biến
-            simulateHeartRate();
+            tvAverage.setText(R.string.no_data);
         }
-    }
-
-    private void stopMeasurement() {
-        isMeasuring = false;
-        btnMeasure.setText(R.string.start_measuring);
-        tvStatus.setText(R.string.press_to_measure);
-        sensorManager.unregisterListener(this);
-        handler.removeCallbacksAndMessages(null);
-    }
-
-    private void simulateHeartRate() {
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (isMeasuring) {
-                    int heartRate = 60 + random.nextInt(40); // 60-100 BPM
-                    tvHeartRate.setText(heartRate + " BPM");
-
-                    // Lưu dữ liệu vào HealthDataManager
-                    dataManager.saveHeartRateData(heartRate);
-
-                    if (heartRate < 60) {
-                        tvStatus.setText(R.string.heart_rate_low);
-                    }
-                    else if (heartRate > 100) {
-                        tvStatus.setText("@string/heart_rate_high");
-                    } else {
-                        tvStatus.setText("@string/heart_rate_normal");
-                    }
-
-                    handler.postDelayed(this, 2000);
-                }
-            }
-        }, 2000);
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
-            float heartRate = event.values[0];
-            tvHeartRate.setText((int)heartRate + " BPM");
-
-            // Lưu dữ liệu vào HealthDataManager
-            dataManager.saveHeartRateData((int)heartRate);
-
-            if (heartRate < 60) {
-                tvStatus.setText("@string/heart_rate_low");
-            } else if (heartRate > 100) {
-                tvStatus.setText("@string/heart_rate_high");
-            } else {
-                tvStatus.setText("@string/heart_rate_normal");
-            }
-        }
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        stopMeasurement();
     }
 }

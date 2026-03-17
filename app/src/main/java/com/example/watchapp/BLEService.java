@@ -19,19 +19,33 @@ import java.util.UUID;
 public class BLEService extends Service {
     private static final String TAG = "BLEService";
 
-    public static final UUID SERVICE_UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
-    public static final UUID CHARACTERISTIC_SENSOR_DATA_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8");
-    public static final UUID CHARACTERISTIC_COMMAND_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a9");
+    // ================= UUIDs =================
+    public static final UUID SERVICE_UUID =
+            UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
+    public static final UUID CHARACTERISTIC_SENSOR_DATA_UUID =
+            UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8");
+    public static final UUID CHARACTERISTIC_COMMAND_UUID =
+            UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a9");
+    // [MỚI] UUID nhận fall alert trực tiếp từ ESP32 (khớp FALL_UUID trong task_ble.cpp)
+    public static final UUID CHARACTERISTIC_FALL_UUID =
+            UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26aa");
 
     private static final UUID CLIENT_CHARACTERISTIC_CONFIG =
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
-    public static final String ACTION_GATT_CONNECTED = "com.example.watchapp.ACTION_GATT_CONNECTED";
-    public static final String ACTION_GATT_DISCONNECTED = "com.example.watchapp.ACTION_GATT_DISCONNECTED";
-    public static final String ACTION_GATT_SERVICES_DISCOVERED = "com.example.watchapp.ACTION_GATT_SERVICES_DISCOVERED";
-    public static final String ACTION_DATA_AVAILABLE = "com.example.watchapp.ACTION_DATA_AVAILABLE";
-    public static final String EXTRA_DATA = "com.example.watchapp.EXTRA_DATA";
+    // ================= ACTIONS =================
+    public static final String ACTION_GATT_CONNECTED =
+            "com.example.watchapp.ACTION_GATT_CONNECTED";
+    public static final String ACTION_GATT_DISCONNECTED =
+            "com.example.watchapp.ACTION_GATT_DISCONNECTED";
+    public static final String ACTION_GATT_SERVICES_DISCOVERED =
+            "com.example.watchapp.ACTION_GATT_SERVICES_DISCOVERED";
+    public static final String ACTION_DATA_AVAILABLE =
+            "com.example.watchapp.ACTION_DATA_AVAILABLE";
+    public static final String EXTRA_DATA =
+            "com.example.watchapp.EXTRA_DATA";
 
+    // ================= FIELDS =================
     private BluetoothManager bluetoothManager;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothGatt bluetoothGatt;
@@ -39,8 +53,8 @@ public class BLEService extends Service {
     private int connectionState = STATE_DISCONNECTED;
 
     private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTING = 1;
-    private static final int STATE_CONNECTED = 2;
+    private static final int STATE_CONNECTING   = 1;
+    private static final int STATE_CONNECTED    = 2;
 
     private final IBinder binder = new LocalBinder();
 
@@ -51,9 +65,7 @@ public class BLEService extends Service {
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return binder;
-    }
+    public IBinder onBind(Intent intent) { return binder; }
 
     @Override
     public boolean onUnbind(Intent intent) {
@@ -64,7 +76,8 @@ public class BLEService extends Service {
     // ================= PERMISSION CHECK =================
     private boolean hasBluetoothConnectPermission() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                ActivityCompat.checkSelfPermission(this,
+                        Manifest.permission.BLUETOOTH_CONNECT)
                         == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -77,7 +90,6 @@ public class BLEService extends Service {
                 connectionState = STATE_CONNECTED;
                 broadcastUpdate(ACTION_GATT_CONNECTED);
                 Log.i(TAG, "Connected to GATT server");
-
                 bluetoothGatt.discoverServices();
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -91,7 +103,12 @@ public class BLEService extends Service {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                // Đăng ký notify HR/SpO2 trước
                 enableSensorDataNotifications();
+                // [MỚI] Delay 600ms rồi đăng ký fall notify
+                // (BLE stack cần xử lý writeDescriptor đầu tiên xong)
+                new android.os.Handler(android.os.Looper.getMainLooper())
+                        .postDelayed(() -> enableFallNotifications(), 600);
             }
         }
 
@@ -107,9 +124,40 @@ public class BLEService extends Service {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            // [MỚI] Tách riêng xử lý fall characteristic
+            if (CHARACTERISTIC_FALL_UUID.equals(characteristic.getUuid())) {
+                handleFallCharacteristic(characteristic);
+            } else {
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
+            }
         }
     };
+
+    // ================= [MỚI] FALL CHARACTERISTIC HANDLER =================
+    // Gọi khi ESP32 notify qua CHARACTERISTIC_FALL_UUID
+    // Giữ nguyên checkFallRisk() cũ (dùng cho accel data từ sensor JSON)
+    private void handleFallCharacteristic(BluetoothGattCharacteristic characteristic) {
+        try {
+            String jsonString = new String(characteristic.getValue());
+            JSONObject json = new JSONObject(jsonString);
+
+            if (!"FALL".equals(json.optString("type"))) return;
+
+            float mag = (float) json.optDouble("mag", 0.0);
+            Log.w(TAG, "FALL EVENT from ESP32! magnitude=" + mag + "g");
+
+            // Broadcast giống cũ để các Activity đang lắng nghe vẫn nhận được
+            Intent fallIntent = new Intent("com.example.watchapp.FALL_DETECTED");
+            fallIntent.putExtra("magnitude", (double) mag);
+            LocalBroadcastManager.getInstance(this).sendBroadcast(fallIntent);
+
+            // [MỚI] Hiển thị system notification — hoạt động cả khi app đóng
+            FallNotificationHelper.showFallNotification(this, mag);
+
+        } catch (JSONException e) {
+            Log.e(TAG, "Fall JSON error: " + e.getMessage());
+        }
+    }
 
     // ================= BROADCAST =================
     private void broadcastUpdate(String action) {
@@ -117,7 +165,8 @@ public class BLEService extends Service {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    private void broadcastUpdate(String action, BluetoothGattCharacteristic characteristic) {
+    private void broadcastUpdate(String action,
+                                 BluetoothGattCharacteristic characteristic) {
         Intent intent = new Intent(action);
 
         if (CHARACTERISTIC_SENSOR_DATA_UUID.equals(characteristic.getUuid())) {
@@ -152,7 +201,7 @@ public class BLEService extends Service {
                 double x = json.getDouble("accelX");
                 double y = json.getDouble("accelY");
                 double z = json.getDouble("accelZ");
-                checkFallRisk(x, y, z);
+                checkFallRisk(x, y, z); // Giữ nguyên logic cũ
             }
 
         } catch (JSONException e) {
@@ -160,8 +209,9 @@ public class BLEService extends Service {
         }
     }
 
+    // Giữ nguyên — dùng cho accel data trong sensor JSON
     private void checkFallRisk(double x, double y, double z) {
-        double magnitude = Math.sqrt(x*x + y*y + z*z);
+        double magnitude = Math.sqrt(x * x + y * y + z * z);
 
         if (magnitude > 25.0 || magnitude < 2.0) {
             Intent fallIntent = new Intent("com.example.watchapp.FALL_DETECTED");
@@ -172,14 +222,14 @@ public class BLEService extends Service {
 
     // ================= INIT =================
     public boolean initialize() {
-        bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        bluetoothManager =
+                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
         return bluetoothAdapter != null;
     }
 
     // ================= CONNECT =================
     public boolean connect(String address) {
-
         if (!hasBluetoothConnectPermission()) {
             Log.e(TAG, "Missing BLUETOOTH_CONNECT permission");
             return false;
@@ -187,7 +237,8 @@ public class BLEService extends Service {
 
         if (bluetoothAdapter == null || address == null) return false;
 
-        if (deviceAddress != null && address.equals(deviceAddress) && bluetoothGatt != null) {
+        if (deviceAddress != null && address.equals(deviceAddress)
+                && bluetoothGatt != null) {
             bluetoothGatt.connect();
             connectionState = STATE_CONNECTING;
             return true;
@@ -196,19 +247,16 @@ public class BLEService extends Service {
         BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
         if (device == null) return false;
 
-        bluetoothGatt = device.connectGatt(this, false, gattCallback);
-        deviceAddress = address;
-        connectionState = STATE_CONNECTING;
+        bluetoothGatt     = device.connectGatt(this, false, gattCallback);
+        deviceAddress     = address;
+        connectionState   = STATE_CONNECTING;
         return true;
     }
 
     // ================= DISCONNECT =================
     public void disconnect() {
         if (!hasBluetoothConnectPermission()) return;
-
-        if (bluetoothGatt != null) {
-            bluetoothGatt.disconnect();
-        }
+        if (bluetoothGatt != null) bluetoothGatt.disconnect();
     }
 
     public void close() {
@@ -220,21 +268,34 @@ public class BLEService extends Service {
 
     // ================= ENABLE NOTIFY =================
     public void enableSensorDataNotifications() {
+        enableNotifyForCharacteristic(CHARACTERISTIC_SENSOR_DATA_UUID);
+    }
 
+    // [MỚI] Đăng ký notify fall alert — gọi sau enableSensorDataNotifications()
+    public void enableFallNotifications() {
+        enableNotifyForCharacteristic(CHARACTERISTIC_FALL_UUID);
+        Log.d(TAG, "Fall notifications enabled");
+    }
+
+    // Helper dùng chung để bật notify — tránh lặp code
+    private void enableNotifyForCharacteristic(UUID charUuid) {
         if (!hasBluetoothConnectPermission()) return;
+        if (bluetoothGatt == null) return;
 
         BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
         if (service == null) return;
 
         BluetoothGattCharacteristic characteristic =
-                service.getCharacteristic(CHARACTERISTIC_SENSOR_DATA_UUID);
-        if (characteristic == null) return;
+                service.getCharacteristic(charUuid);
+        if (characteristic == null) {
+            Log.e(TAG, "Characteristic not found: " + charUuid);
+            return;
+        }
 
         bluetoothGatt.setCharacteristicNotification(characteristic, true);
 
         BluetoothGattDescriptor descriptor =
                 characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG);
-
         if (descriptor != null) {
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             bluetoothGatt.writeDescriptor(descriptor);
@@ -243,7 +304,6 @@ public class BLEService extends Service {
 
     // ================= SEND COMMAND =================
     public void sendCommand(byte[] command) {
-
         if (!hasBluetoothConnectPermission()) return;
         if (bluetoothGatt == null) return;
 
@@ -258,7 +318,7 @@ public class BLEService extends Service {
         bluetoothGatt.writeCharacteristic(characteristic);
     }
 
-    // ================= API COMMANDS =================
+    // ================= API COMMANDS (giữ nguyên) =================
     public void changeSamplingMode(int mode) {
         sendCommand(new byte[]{0x01, (byte) mode});
     }
