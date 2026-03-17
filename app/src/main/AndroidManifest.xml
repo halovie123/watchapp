@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Thêm mới: ghi âm cho ChatboxActivity -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Bluetooth Permissions -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -36,7 +40,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- Onboarding Activity (Main Launcher) -->
         <activity
             android:name=".OnboardingActivity"
             android:exported="true"
@@ -47,48 +50,44 @@
             </intent-filter>
         </activity>
 
-        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <!-- BLE Scan Activity -->
         <activity
             android:name=".BLEScanActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar"
             android:label="Quét thiết bị BLE" />
 
-        <!-- Heart Rate Activity -->
         <activity
             android:name=".HeartRateActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <!-- Oxygen Activity -->
         <activity
             android:name=".OxygenActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <!-- Advanced Settings Activity -->
         <activity
             android:name=".AdvancedSettingsActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
-        <!-- BLE Service -->
+        <!-- Sửa: exported="false" vì chỉ mở từ trong app -->
+        <activity
+            android:name=".ChatboxActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:label="Trợ lý sức khỏe"
+            android:screenOrientation="portrait" />
+
         <service
             android:name=".BLEService"
             android:enabled="true"
             android:exported="false" />
-
-        <!-- ChatboxActivity (ĐÃ XOÁ LAUNCHER) -->
-        <activity
-            android:name=".ChatboxActivity"
-            android:exported="true"
-            android:theme="@style/AppTheme.NoActionBar" />
 
     </application>
 

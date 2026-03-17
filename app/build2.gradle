@@ -1,0 +1,10 @@
+android {
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.example.watchapp"
+        minSdk 26  // Change this from 24 to 26
+        targetSdk 36
+        // ...
+    }
+}
