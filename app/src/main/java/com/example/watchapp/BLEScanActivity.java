@@ -219,49 +219,39 @@ public class BLEScanActivity extends AppCompatActivity {
 
             BluetoothDevice device = result.getDevice();
 
-            // Log devices - PHẢI kiểm tra permission trước
-            String deviceName = "Unknown";
-            String deviceAddress = "Unknown";
+            // Lấy tên và địa chỉ — kiểm tra permission cho Android 12+
+            String deviceName    = null;
+            String deviceAddress = device.getAddress();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
                         Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                    deviceName = device.getName() != null ? device.getName() : "Unknown";
-                    deviceAddress = device.getAddress();
-                    Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
+                    deviceName = device.getName();
                 }
             } else {
-                deviceName = device.getName() != null ? device.getName() : "Unknown";
-                deviceAddress = device.getAddress();
-                Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
+                deviceName = device.getName();
             }
 
-            // Kiểm tra xem device đã có trong list chưa
-            boolean deviceExists = false;
+            // ── LỌC: bỏ qua thiết bị không có tên (Unknown Device) ──────────
+            if (deviceName == null || deviceName.trim().isEmpty()) {
+                Log.d(TAG, "Skipped unnamed device: " + deviceAddress);
+                return;
+            }
+
+            Log.d(TAG, "Found named device: " + deviceName + " (" + deviceAddress + ")");
+
+            // ── LỌC TRÙNG: kiểm tra theo địa chỉ MAC ────────────────────────
             for (BluetoothDevice d : deviceList) {
-                // Also need permission check here
-                String existingAddress = "Unknown";
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
-                            Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                        existingAddress = d.getAddress();
-                    }
-                } else {
-                    existingAddress = d.getAddress();
-                }
-
-                if (existingAddress.equals(deviceAddress)) {
-                    deviceExists = true;
-                    break;
-                }
+                if (d.getAddress().equals(deviceAddress)) return; // đã có rồi
             }
 
-            if (!deviceExists) {
-                deviceList.add(device);
+            // Thêm vào danh sách và cập nhật UI
+            deviceList.add(device);
+            runOnUiThread(() -> {
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
                 tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
-                Log.d(TAG, "Added device: " + deviceAddress);
-            }
+            });
+            Log.d(TAG, "Added: " + deviceName + " (" + deviceAddress + ")");
         }
 
         @Override
