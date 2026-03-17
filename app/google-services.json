@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1054503056374",
+    "project_id": "watchapp-1138e",
+    "storage_bucket": "watchapp-1138e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1054503056374:android:06ed62fe3d89138900cdd7",
+        "android_client_info": {
+          "package_name": "com.example.watchapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDd6gITzLmJZlXbM5CSho0mA6Wfp2bSSgM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
