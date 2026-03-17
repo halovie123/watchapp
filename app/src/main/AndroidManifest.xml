@@ -72,6 +72,11 @@
             android:theme="@style/AppTheme.NoActionBar" />
 
         <activity
+            android:name=".FallDetectionActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <activity
             android:name=".AdvancedSettingsActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />

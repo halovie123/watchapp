@@ -180,7 +180,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         });
 
         cardFallDetection.setOnClickListener(v -> {
-            Toast.makeText(this, R.string.fall_detection_active, Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(MainActivity.this, FallDetectionActivity.class));
         });
 
         cardDisplay.setOnClickListener(v -> {
@@ -330,22 +330,12 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume called");
 
-        // KIỂM TRA NGÔN NGỮ ĐÃ ĐỔI CHƯA
-        String savedLanguage = LocaleHelper.getPersistedLanguage(this);
-        String currentLanguage = getResources().getConfiguration().locale.getLanguage();
-
-        if (!savedLanguage.equals(currentLanguage)) {
-            recreate(); // Tải lại với ngôn ngữ mới
-            return;
-        }
-
-        // CODE CŨ
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer,
                     SensorManager.SENSOR_DELAY_NORMAL);
         }
+
         updateCharts();
     }
 

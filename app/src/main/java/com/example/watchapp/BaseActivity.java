@@ -8,13 +8,12 @@ public class BaseActivity extends AppCompatActivity {
 
     @Override
     protected void attachBaseContext(Context newBase) {
+
         super.attachBaseContext(LocaleHelper.setLocale(newBase));
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Áp dụng ngôn ngữ đã lưu
-        LocaleHelper.setLocale(this);
     }
 }

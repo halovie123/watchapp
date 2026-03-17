@@ -31,7 +31,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BLEScanActivity extends AppCompatActivity {
+public class BLEScanActivity extends BaseActivity {
     private static final String TAG = "BLEScanActivity";
     private static final int PERMISSION_REQUEST_CODE = 101;
     private static final long SCAN_PERIOD = 10000; // 10 giây

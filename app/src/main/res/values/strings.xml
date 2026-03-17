@@ -62,6 +62,35 @@
     <string name="oxygen_critical">SpO₂ nguy hiểm — dưới 90%%</string>
     <string name="oxygen_motion_warning">Phát hiện chuyển động — dữ liệu có thể không chính xác</string>
 
+    <!-- Fall Detection -->
+    <string name="fall_detection_title">Phát hiện té ngã</string>
+    <string name="fall_detection_enable">Phát hiện té ngã</string>
+    <string name="fall_detection_desc">Tự động phát hiện và cảnh báo khi có nguy cơ té ngã</string>
+    <string name="fall_detection_switch_label">Bật tính năng</string>
+    <string name="fall_detection_status_label">Trạng thái:</string>
+    <string name="fall_detection_active">● Đang hoạt động</string>
+    <string name="fall_detection_inactive">● Đã tắt</string>
+    <string name="fall_detection_turned_on">Đã bật phát hiện té ngã</string>
+    <string name="fall_detection_turned_off">Đã tắt phát hiện té ngã</string>
+
+    <string name="fall_statistics">Thống kê</string>
+    <string name="fall_total">Tổng\nté ngã</string>
+    <string name="fall_confirmed">Đã\nxác nhận</string>
+    <string name="fall_cancelled">Đã\nhủy</string>
+
+    <string name="fall_history">Lịch sử té ngã</string>
+    <string name="fall_no_history">Chưa có sự kiện té ngã\nBạn đang an toàn!</string>
+    <string name="fall_magnitude">Cường độ: %.1f m/s²</string>
+    <string name="fall_clear_history">Xóa lịch sử</string>
+    <string name="fall_clear_history_confirm">Bạn có chắc muốn xóa toàn bộ lịch sử té ngã không?</string>
+    <string name="fall_history_cleared">Đã xóa lịch sử</string>
+    <string name="fall_status_confirmed">Đã xác nhận</string>
+    <string name="fall_status_cancelled">Đã hủy</string>
+
+    <!-- Dùng chung (thêm nếu chưa có) -->
+    <string name="confirm">Xác nhận</string>
+    <string name="cancel">Hủy</string>
+
     <!-- Advanced Settings -->
     <string name="emergency_contacts">Email, SĐT Người Thân</string>
     <string name="emergency_contacts_desc">Thêm email, số điện thoại người thân để tự động gửi tin nhắn khi có báo động</string>
@@ -162,7 +191,6 @@
 
     <!-- Toast Messages -->
     <string name="fall_detected">Phát hiện té ngã! Bạn có ổn không?</string>
-    <string name="fall_detection_active">Cảnh báo vấp ngã đang hoạt động</string>
     <string name="display_settings">Cài đặt hiển thị</string>
 
 </resources>
