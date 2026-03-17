@@ -24,9 +24,8 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/button_back_green"
-                android:text="←"
-                android:textSize="24sp"
-                android:textColor="#4A7C59" />
+                android:text="🏠"
+                android:textSize="24sp"/>
 
             <TextView
                 android:layout_width="0dp"

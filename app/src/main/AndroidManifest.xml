@@ -84,6 +84,12 @@
             android:enabled="true"
             android:exported="false" />
 
+        <!-- ChatboxActivity (ĐÃ XOÁ LAUNCHER) -->
+        <activity
+            android:name=".ChatboxActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme.NoActionBar" />
+
     </application>
 
 </manifest>

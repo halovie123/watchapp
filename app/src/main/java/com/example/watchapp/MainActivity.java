@@ -26,6 +26,7 @@ import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView tvHeartRateAvg, tvOxygenAvg;
     private CardView cardHeartRate, cardOxygen, cardFallDetection, cardDisplay, cardAdvanced;
     private Button btnBackToOnboarding;
+    private FloatingActionButton fabChat;
     private ChartView heartRateChartView, oxygenChartView;
 
     // BLE Service (background only)
@@ -91,6 +93,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         tvHeartRateAvg = findViewById(R.id.tvHeartRateAvg);
         tvOxygenAvg = findViewById(R.id.tvOxygenAvg);
         btnBackToOnboarding = findViewById(R.id.btnBackToOnboarding);
+        fabChat = findViewById(R.id.fabChat);
         cardHeartRate = findViewById(R.id.cardHeartRate);
         cardOxygen = findViewById(R.id.cardOxygen);
         cardFallDetection = findViewById(R.id.cardFallDetection);
@@ -181,6 +184,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         cardAdvanced.setOnClickListener(v -> {
             startActivity(new Intent(MainActivity.this, AdvancedSettingsActivity.class));
+        });
+
+        // Floating Action Button for Chat
+        fabChat.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, ChatboxActivity.class));
         });
     }
 
