@@ -5,22 +5,34 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.Handler;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
 
-import java.util.Random;
+import androidx.annotation.NonNull;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class HeartRateActivity extends BaseActivity implements SensorEventListener {
-    private TextView tvHeartRate, tvStatus;
-    private Button btnMeasure, btnBack;
+
+    private static final String TAG = "HeartRateActivity";
+
+    // UI
+    private TextView tvHeartRate;
+    private TextView tvStatus;
+    private Button   btnBack;
+
+    // Sensor
     private SensorManager sensorManager;
-    private Sensor heartRateSensor;
-    private boolean isMeasuring = false;
-    private Handler handler;
-    private Random random;
-    private HealthDataManager dataManager;
+    private Sensor        heartRateSensor;
+
+    // Firebase
+    private DatabaseReference heartRateRef;
+    private ValueEventListener heartRateListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,100 +40,90 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
         setContentView(R.layout.activity_heart_rate);
 
         tvHeartRate = findViewById(R.id.tvHeartRate);
-        tvStatus = findViewById(R.id.tvStatus);
-        btnMeasure = findViewById(R.id.btnMeasure);
-        btnBack = findViewById(R.id.btnBack);
-
-        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
-        handler = new Handler();
-        random = new Random();
-        dataManager = HealthDataManager.getInstance(this);
-
-        btnMeasure.setOnClickListener(v -> {
-            if (!isMeasuring) {
-                startMeasurement();
-            } else {
-                stopMeasurement();
-            }
-        });
-
+        tvStatus    = findViewById(R.id.tvStatus);
+        btnBack     = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
+
+        sensorManager   = (SensorManager) getSystemService(SENSOR_SERVICE);
+        heartRateSensor = sensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
+
+        // Lắng nghe Firebase — dữ liệu do MainActivity gửi lên mỗi 3s
+        heartRateRef = FirebaseDatabase.getInstance().getReference("heart_rate");
+        startFirebaseListener();
     }
 
-    private void startMeasurement() {
-        isMeasuring = true;
-        btnMeasure.setText("Dừng đo");
-        tvStatus.setText("Đang đo nhịp tim...");
+    // =========================================================================
+    //  ĐỌC DỮ LIỆU TỪ FIREBASE (realtime)
+    // =========================================================================
 
-        if (heartRateSensor != null) {
-            sensorManager.registerListener(this, heartRateSensor,
-                    SensorManager.SENSOR_DELAY_NORMAL);
-        } else {
-            // Mô phỏng nếu không có cảm biến
-            simulateHeartRate();
-        }
-    }
+    private void startFirebaseListener() {
+        tvStatus.setText("Đang chờ dữ liệu...");
 
-    private void stopMeasurement() {
-        isMeasuring = false;
-        btnMeasure.setText(R.string.start_measuring);
-        tvStatus.setText(R.string.press_to_measure);
-        sensorManager.unregisterListener(this);
-        handler.removeCallbacksAndMessages(null);
-    }
-
-    private void simulateHeartRate() {
-        handler.postDelayed(new Runnable() {
+        heartRateListener = new ValueEventListener() {
             @Override
-            public void run() {
-                if (isMeasuring) {
-                    int heartRate = 60 + random.nextInt(40); // 60-100 BPM
-                    tvHeartRate.setText(heartRate + " BPM");
-
-                    // Lưu dữ liệu vào HealthDataManager
-                    dataManager.saveHeartRateData(heartRate);
-
-                    if (heartRate < 60) {
-                        tvStatus.setText(R.string.heart_rate_low);
-                    }
-                    else if (heartRate > 100) {
-                        tvStatus.setText("@string/heart_rate_high");
-                    } else {
-                        tvStatus.setText("@string/heart_rate_normal");
-                    }
-
-                    handler.postDelayed(this, 2000);
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    tvHeartRate.setText("--");
+                    tvStatus.setText("Chưa có dữ liệu");
+                    return;
                 }
+
+                Integer bpm = snapshot.child("value").getValue(Integer.class);
+                if (bpm == null) return;
+
+                Log.d(TAG, "Firebase → " + bpm + " BPM");
+
+                // Hiển thị lên vòng tròn
+                tvHeartRate.setText(String.valueOf(bpm));
+
+                // Trạng thái
+                if      (bpm < 60)  tvStatus.setText("Nhịp tim thấp");
+                else if (bpm > 100) tvStatus.setText("Nhịp tim cao");
+                else                tvStatus.setText("Nhịp tim bình thường");
             }
-        }, 2000);
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Lỗi: " + error.getMessage());
+                tvStatus.setText("Lỗi kết nối Firebase");
+            }
+        };
+
+        heartRateRef.addValueEventListener(heartRateListener);
     }
+
+    // =========================================================================
+    //  CẢM BIẾN THẬT (dùng khi có phần cứng)
+    //  Khi có cảm biến thật: bỏ startFirebaseListener(),
+    //  dùng onSensorChanged() → pushToFirebase() thay thế
+    // =========================================================================
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
-            float heartRate = event.values[0];
-            tvHeartRate.setText((int)heartRate + " BPM");
-
-            // Lưu dữ liệu vào HealthDataManager
-            dataManager.saveHeartRateData((int)heartRate);
-
-            if (heartRate < 60) {
-                tvStatus.setText("@string/heart_rate_low");
-            } else if (heartRate > 100) {
-                tvStatus.setText("@string/heart_rate_high");
-            } else {
-                tvStatus.setText("@string/heart_rate_normal");
-            }
+        if (event.sensor.getType() != Sensor.TYPE_HEART_RATE) return;
+        int bpm = Math.round(event.values[0]);
+        if (event.accuracy == SensorManager.SENSOR_STATUS_NO_CONTACT) {
+            tvStatus.setText("Đặt tay lên cảm biến!"); return;
         }
+        if (event.accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE || bpm <= 0) {
+            tvStatus.setText("Đang hiệu chỉnh..."); return;
+        }
+        tvHeartRate.setText(String.valueOf(bpm));
+        heartRateRef.child("value").setValue(bpm);
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { }
+
+    // =========================================================================
+    //  LIFECYCLE
+    // =========================================================================
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopMeasurement();
+        if (heartRateRef != null && heartRateListener != null)
+            heartRateRef.removeEventListener(heartRateListener);
+        sensorManager.unregisterListener(this);
     }
 }

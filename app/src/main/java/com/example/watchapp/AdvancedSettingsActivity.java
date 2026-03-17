@@ -20,8 +20,6 @@ public class AdvancedSettingsActivity extends BaseActivity {
     private LinearLayout contactsContainer;
     private Button btnAddContact;
     private Button btnBack;
-    private NumberPicker pickerMinute, pickerSecond;
-    private Button btnTimeOk;
     private RadioGroup radioGroupLanguage;
     private TextView tvWatchName, tvWatchVersion;
     private List<String> emergencyContacts;
@@ -44,22 +42,10 @@ public class AdvancedSettingsActivity extends BaseActivity {
         btnBack = findViewById(R.id.btnBack);
         contactsContainer = findViewById(R.id.contactsContainer);
         btnAddContact = findViewById(R.id.btnAddContact);
-        pickerMinute = findViewById(R.id.pickerMinute);
-        pickerSecond = findViewById(R.id.pickerSecond);
-        btnTimeOk = findViewById(R.id.btnTimeOk);
         radioGroupLanguage = findViewById(R.id.radioGroupLanguage);
         tvWatchName = findViewById(R.id.tvWatchName);
         tvWatchVersion = findViewById(R.id.tvWatchVersion);
 
-        // Cấu hình NumberPicker cho Phút (0-59)
-        pickerMinute.setMinValue(0);
-        pickerMinute.setMaxValue(59);
-        pickerMinute.setWrapSelectorWheel(true);
-
-        // Cấu hình NumberPicker cho Giây (0-59)
-        pickerSecond.setMinValue(0);
-        pickerSecond.setMaxValue(59);
-        pickerSecond.setWrapSelectorWheel(true);
     }
 
     private void setupListeners() {
@@ -67,13 +53,6 @@ public class AdvancedSettingsActivity extends BaseActivity {
 
         btnAddContact.setOnClickListener(v -> addContactField());
 
-        btnTimeOk.setOnClickListener(v -> {
-            int minute = pickerMinute.getValue();
-            int second = pickerSecond.getValue();
-            saveCheckTime(minute, second);
-            String message = getString(R.string.saved_check_cycle, minute, second);
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-        });
 
         radioGroupLanguage.setOnCheckedChangeListener((group, checkedId) -> {
             // QUAN TRỌNG: Chỉ xử lý khi KHÔNG đang load settings
@@ -148,11 +127,6 @@ public class AdvancedSettingsActivity extends BaseActivity {
         tvWatchName.setText(getString(R.string.watch_name, watchName));
         tvWatchVersion.setText(getString(R.string.watch_version, watchVersion));
 
-        // Load time (phút và giây)
-        int minute = prefs.getInt("checkMinute", 30);
-        int second = prefs.getInt("checkSecond", 0);
-        pickerMinute.setValue(minute);
-        pickerSecond.setValue(second);
 
         // TẮT flag sau khi load xong
         isLoadingSettings = false;

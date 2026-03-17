@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Hàng dữ liệu -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingVertical="12dp">
+
+        <!-- Icon ⚠️ -->
+        <TextView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:text="⚠️"
+            android:textSize="20sp"
+            android:gravity="center"
+            android:background="@drawable/circle_bg_red_light"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Ngày giờ + cường độ -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvFallDateTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="15/06/2025 - 14:32"
+                android:textSize="15sp"
+                android:textColor="#000000"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvFallMagnitude"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cường độ: 28.4 m/s²"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Badge Đã xác nhận / Đã hủy -->
+        <TextView
+            android:id="@+id/tvFallStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Đã xác nhận"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="5dp"
+            android:background="@drawable/badge_confirmed_bg" />
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:id="@+id/dividerFallItem"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#EEEEEE" />
+
+</LinearLayout>

@@ -1,20 +1,30 @@
 package com.example.watchapp;
 
 import android.os.Bundle;
-import android.os.Handler;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
 
-import java.util.Random;
+import androidx.annotation.NonNull;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class OxygenActivity extends BaseActivity {
-    private TextView tvOxygenLevel, tvStatus;
-    private Button btnMeasure, btnBack;
-    private boolean isMeasuring = false;
-    private Handler handler;
-    private Random random;
-    private HealthDataManager dataManager;
+
+    private static final String TAG = "OxygenActivity";
+
+    // UI
+    private TextView tvOxygenLevel;
+    private TextView tvStatus;
+    private Button   btnBack;
+
+    // Firebase
+    private DatabaseReference oxygenRef;
+    private ValueEventListener oxygenListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,66 +32,63 @@ public class OxygenActivity extends BaseActivity {
         setContentView(R.layout.activity_oxygen);
 
         tvOxygenLevel = findViewById(R.id.tvOxygenLevel);
-        tvStatus = findViewById(R.id.tvStatus);
-        btnMeasure = findViewById(R.id.btnMeasure);
-        btnBack = findViewById(R.id.btnBack);
-
-        handler = new Handler();
-        random = new Random();
-        dataManager = HealthDataManager.getInstance(this);
-
-        btnMeasure.setOnClickListener(v -> {
-            if (!isMeasuring) {
-                startMeasurement();
-            } else {
-                stopMeasurement();
-            }
-        });
-
+        tvStatus      = findViewById(R.id.tvStatus);
+        btnBack       = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> finish());
+
+        // Lắng nghe Firebase — dữ liệu do MainActivity gửi lên mỗi 3s
+        oxygenRef = FirebaseDatabase.getInstance().getReference("oxygen_level");
+        startFirebaseListener();
     }
 
-    private void startMeasurement() {
-        isMeasuring = true;
-        btnMeasure.setText(R.string.stop_measuring);
-        tvStatus.setText(R.string.measuring_oxygen);
+    // =========================================================================
+    //  ĐỌC DỮ LIỆU TỪ FIREBASE (realtime)
+    // =========================================================================
 
-        simulateOxygenLevel();
-    }
+    private void startFirebaseListener() {
+        tvStatus.setText("⏳ Đang chờ dữ liệu...");
 
-    private void stopMeasurement() {
-        isMeasuring = false;
-        btnMeasure.setText(R.string.start_measuring);
-        tvStatus.setText(R.string.press_to_measure_spo2);
-        handler.removeCallbacksAndMessages(null);
-    }
-
-    private void simulateOxygenLevel() {
-        handler.postDelayed(new Runnable() {
+        oxygenListener = new ValueEventListener() {
             @Override
-            public void run() {
-                if (isMeasuring) {
-                    int oxygenLevel = 95 + random.nextInt(6); // 95-100%
-                    tvOxygenLevel.setText(oxygenLevel + "%");
-
-                    // Lưu dữ liệu vào HealthDataManager
-                    dataManager.saveOxygenData(oxygenLevel);
-
-                    if (oxygenLevel < 95) {
-                        tvStatus.setText(R.string.oxygen_low);
-                    } else {
-                        tvStatus.setText(R.string.oxygen_normal);
-                    }
-
-                    handler.postDelayed(this, 2000);
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    tvOxygenLevel.setText("--");
+                    tvStatus.setText("Chưa có dữ liệu");
+                    return;
                 }
+
+                Integer spo2 = snapshot.child("value").getValue(Integer.class);
+                if (spo2 == null) return;
+
+                Log.d(TAG, "Firebase → " + spo2 + "%");
+
+                // Hiển thị lên vòng tròn
+                tvOxygenLevel.setText(String.valueOf(spo2));
+
+                // Trạng thái
+                if      (spo2 < 95) tvStatus.setText("Nồng độ oxy thấp!");
+                else if (spo2 < 97) tvStatus.setText("Nồng độ oxy hơi thấp");
+                else                tvStatus.setText("Nồng độ oxy bình thường");
             }
-        }, 2000);
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Lỗi: " + error.getMessage());
+                tvStatus.setText("Lỗi kết nối Firebase");
+            }
+        };
+
+        oxygenRef.addValueEventListener(oxygenListener);
     }
+
+    // =========================================================================
+    //  LIFECYCLE
+    // =========================================================================
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopMeasurement();
+        if (oxygenRef != null && oxygenListener != null)
+            oxygenRef.removeEventListener(oxygenListener);
     }
 }
