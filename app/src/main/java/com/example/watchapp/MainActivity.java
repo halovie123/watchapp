@@ -22,20 +22,33 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 public class MainActivity extends BaseActivity implements SensorEventListener {
+
     private static final String TAG = "MainActivity";
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final float FALL_THRESHOLD = 25.0f;
+    private static final int SIMULATE_INTERVAL_MS = 3000;
 
     // UI Components
     private TextView tvTime, tvDate, tvBatteryStatus;
@@ -51,13 +64,30 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private String connectedDeviceAddress;
     private String connectedDeviceName;
 
-    // Sensors
+    // Sensor (chỉ dùng accelerometer để phát hiện té ngã thật)
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Handler timeHandler;
     private Runnable timeRunnable;
     private HealthDataManager dataManager;
     private long lastFallDetectionTime = 0;
+
+    // Firebase — ghi vào health_records (push, không ghi đè, lưu lịch sử)
+    private DatabaseReference healthRecordsRef;
+    private ChildEventListener healthChildListener;
+
+    // Firebase — ghi giá trị MỚI NHẤT để HeartRateActivity / OxygenActivity hiển thị
+    private DatabaseReference heartRateDisplayRef;   // heart_rate/value
+    private DatabaseReference oxygenDisplayRef;      // oxygen_level/value
+
+    // Simulation — XÓA KHI CÓ CẢM BIẾN THẬT
+    private Handler simulateHandler;
+    private Random  random;
+    private boolean isSimulating = false;
+
+    // =========================================================================
+    //  LIFECYCLE
+    // =========================================================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,12 +96,15 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
         Log.d(TAG, "onCreate started");
         dataManager = HealthDataManager.getInstance(this);
+        simulateHandler = new Handler();
+        random          = new Random();
 
         initViews();
         checkPermissions();
         setupSensors();
         startClock();
         setupClickListeners();
+        setupFirebaseListener();
 
         // Bind BLE Service
         Intent gattServiceIntent = new Intent(this, BLEService.class);
@@ -84,7 +117,203 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         loadSavedConnection();
 
         Log.d(TAG, "onCreate finished");
+
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String savedLanguage   = LocaleHelper.getPersistedLanguage(this);
+        String currentLanguage = getResources().getConfiguration().locale.getLanguage();
+        if (!savedLanguage.equals(currentLanguage)) { recreate(); return; }
+
+        if (accelerometer != null)
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+
+        updateCharts();
+        startSimulation();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        sensorManager.unregisterListener(this);
+        // KHÔNG dừng simulation — tiếp tục gửi dù chuyển activity khác
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopSimulation();
+        if (healthRecordsRef != null && healthChildListener != null)
+            healthRecordsRef.removeEventListener(healthChildListener);
+        if (timeHandler != null) timeHandler.removeCallbacks(timeRunnable);
+        if (bleServiceBound) { unbindService(serviceConnection); bleServiceBound = false; }
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(bleUpdateReceiver);
+    }
+
+    // =========================================================================
+    //  SIMULATION — random tất cả 4 loại dữ liệu mỗi 3 giây
+    //  XÓA startSimulation() & stopSimulation() KHI CÓ CẢM BIẾN THẬT
+    // =========================================================================
+
+    private void startSimulation() {
+        if (isSimulating) return;
+        isSimulating = true;
+
+        simulateHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!isSimulating) return;
+
+                // ── Heart rate: 60–100 BPM ────────────────────────────────────
+                int bpm  = 60 + random.nextInt(41);
+
+                // ── SpO2: 95–100% ─────────────────────────────────────────────
+                int spo2 = 95 + random.nextInt(6);
+
+                pushHealthRecord(bpm, spo2);
+                simulateHandler.postDelayed(this, SIMULATE_INTERVAL_MS);
+            }
+        });
+    }
+
+    private void stopSimulation() {
+        isSimulating = false;
+        simulateHandler.removeCallbacksAndMessages(null);
+    }
+
+    private void pushHealthRecord(int bpm, int spo2) {
+
+        String timestamp = new SimpleDateFormat(
+                "dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(new Date());
+
+        // Random fall detection (yes/no)
+        String fall = random.nextBoolean() ? "yes" : "no";
+
+        Map<String, Object> record = new HashMap<>();
+        record.put("timestamp", timestamp);
+        record.put("heart_rate", bpm);
+        record.put("spo2", spo2);
+        record.put("fall_detection", fall);
+
+        healthRecordsRef.push().setValue(record)
+                .addOnSuccessListener(u -> Log.d(TAG,
+                        " HR=" + bpm + " SpO2=" + spo2 + " FALL=" + fall))
+                .addOnFailureListener(e -> Log.e(TAG, "❌ " + e.getMessage()));
+
+        // Latest value (giữ nguyên)
+        heartRateDisplayRef.setValue(bpm);
+        oxygenDisplayRef.setValue(spo2);
+
+        // Update local + chart
+        dataManager.saveHeartRateData(bpm);
+        dataManager.saveOxygenData(spo2);
+
+        runOnUiThread(() -> {
+            tvHeartRateAvg.setText(dataManager.getAverageHeartRate() + " BPM");
+            tvOxygenAvg.setText(dataManager.getAverageOxygen() + "%");
+            updateHeartRateChart();
+            updateOxygenChart();
+        });
+    }
+
+
+    // =========================================================================
+    //  PHÂN LOẠI CƯỜNG ĐỘ
+    // =========================================================================
+
+    private String classifyMovement(float x, float y, float z) {
+        float mag = (float) Math.sqrt(x * x + y * y + z * z) - 9.8f;
+        if (mag < 0) mag = 0;
+        if (mag < 1f) return "none";
+        if (mag < 4f) return "low";
+        if (mag < 10f) return "moderate";
+        return "high";
+    }
+    private String classifyRotation(float x, float y, float z) {
+        float mag = (float) Math.sqrt(x*x + y*y + z*z);
+        if (mag < 0.1f) return "none";
+        if (mag < 0.5f) return "low";
+        if (mag < 2f)   return "moderate";
+        return "high";
+    }
+
+    private double round2(float val) {
+        return Math.round(val * 100.0) / 100.0;
+    }
+
+    // =========================================================================
+    //  FIREBASE — LẮNG NGHE BẢN GHI MỚI → CẬP NHẬT BIỂU ĐỒ
+    // =========================================================================
+
+    private void setupFirebaseListener() {
+        healthRecordsRef   = FirebaseDatabase.getInstance().getReference("health_records");
+        heartRateDisplayRef = FirebaseDatabase.getInstance().getReference("heart_rate").child("value");
+        oxygenDisplayRef    = FirebaseDatabase.getInstance().getReference("oxygen_level").child("value");
+
+        healthChildListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, String prev) {
+                Integer bpm  = snapshot.child("heart_rate").getValue(Integer.class);
+                Integer spo2 = snapshot.child("spo2").getValue(Integer.class);
+                if (bpm  != null) dataManager.saveHeartRateData(bpm);
+                if (spo2 != null) dataManager.saveOxygenData(spo2);
+                runOnUiThread(() -> updateCharts());
+            }
+            @Override public void onChildChanged(@NonNull DataSnapshot s, String p) {}
+            @Override public void onChildRemoved(@NonNull DataSnapshot s) {}
+            @Override public void onChildMoved(@NonNull DataSnapshot s, String p) {}
+            @Override public void onCancelled(@NonNull DatabaseError e) {
+                Log.e(TAG, "Listener error: " + e.getMessage());
+            }
+        };
+
+        // Chỉ tải 50 bản ghi gần nhất
+        healthRecordsRef.limitToLast(50).addChildEventListener(healthChildListener);
+    }
+
+    // =========================================================================
+    //  BIỂU ĐỒ
+    // =========================================================================
+
+    private void updateHeartRateChart() {
+        if (heartRateChartView == null) return;
+        List<HealthDataManager.HealthDataPoint> data = dataManager.getHeartRateData();
+        if (!data.isEmpty())
+            heartRateChartView.setData(data, Color.parseColor("#E53935"), 50, 120);
+    }
+
+    private void updateOxygenChart() {
+        if (oxygenChartView == null) return;
+        List<HealthDataManager.HealthDataPoint> data = dataManager.getOxygenData();
+        if (!data.isEmpty())
+            oxygenChartView.setData(data, Color.parseColor("#1E88E5"), 90, 100);
+    }
+
+    private void updateCharts() {
+        if (heartRateChartView == null || oxygenChartView == null) return;
+        List<HealthDataManager.HealthDataPoint> hrData = dataManager.getHeartRateData();
+        if (!hrData.isEmpty()) {
+            heartRateChartView.setData(hrData, Color.parseColor("#E53935"), 50, 120);
+            tvHeartRateAvg.setText(dataManager.getAverageHeartRate() + " BPM");
+        } else {
+            tvHeartRateAvg.setText("-- BPM");
+            heartRateChartView.setData(null, Color.parseColor("#E53935"), 50, 120);
+        }
+        List<HealthDataManager.HealthDataPoint> o2Data = dataManager.getOxygenData();
+        if (!o2Data.isEmpty()) {
+            oxygenChartView.setData(o2Data, Color.parseColor("#1E88E5"), 90, 100);
+            tvOxygenAvg.setText(dataManager.getAverageOxygen() + "%");
+        } else {
+            tvOxygenAvg.setText("--%");
+            oxygenChartView.setData(null, Color.parseColor("#1E88E5"), 90, 100);
+        }
+    }
+
+    // =========================================================================
+    //  PHẦN GIỮ NGUYÊN
+    // =========================================================================
 
     private void initViews() {
         tvTime = findViewById(R.id.tvTime);
@@ -120,10 +349,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                         != PackageManager.PERMISSION_GRANTED) {
 
             ActivityCompat.requestPermissions(this,
-                    new String[]{
-                            Manifest.permission.BODY_SENSORS,
-                            Manifest.permission.ACTIVITY_RECOGNITION
-                    }, PERMISSION_REQUEST_CODE);
+                    new String[]{Manifest.permission.BODY_SENSORS,
+                            Manifest.permission.ACTIVITY_RECOGNITION},
+                    PERMISSION_REQUEST_CODE);
         }
     }
 
@@ -164,37 +392,23 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
     private void setupClickListeners() {
         btnBackToOnboarding.setOnClickListener(v -> {
-            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-            prefs.edit().putBoolean("hasOnboarded", false).apply();
-
-            startActivity(new Intent(MainActivity.this, OnboardingActivity.class));
+            getSharedPreferences("AppPrefs", MODE_PRIVATE)
+                    .edit().putBoolean("hasOnboarded", false).apply();
+            startActivity(new Intent(this, OnboardingActivity.class));
             finish();
         });
-
-        cardHeartRate.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, HeartRateActivity.class));
-        });
-
-        cardOxygen.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, OxygenActivity.class));
-        });
-
-        cardFallDetection.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, FallDetectionActivity.class));
-        });
-
-        cardDisplay.setOnClickListener(v -> {
-            Toast.makeText(this, "Cài đặt hiển thị", Toast.LENGTH_SHORT).show();
-        });
-
-        cardAdvanced.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, AdvancedSettingsActivity.class));
-        });
-
-        // Floating Action Button for Chat
-        fabChat.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, ChatboxActivity.class));
-        });
+        cardHeartRate.setOnClickListener(v ->
+                startActivity(new Intent(this, HeartRateActivity.class)));
+        cardOxygen.setOnClickListener(v ->
+                startActivity(new Intent(this, OxygenActivity.class)));
+        cardFallDetection.setOnClickListener(v ->
+                startActivity(new Intent(this, FallDetectionActivity.class)));
+        cardDisplay.setOnClickListener(v ->
+                Toast.makeText(this, "Cài đặt hiển thị", Toast.LENGTH_SHORT).show());
+        cardAdvanced.setOnClickListener(v ->
+                startActivity(new Intent(this, AdvancedSettingsActivity.class)));
+        fabChat.setOnClickListener(v ->
+                startActivity(new Intent(this, ChatboxActivity.class)));
     }
 
     // BLE Service Connection
@@ -284,19 +498,16 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     private void showFallAlert(double magnitude) {
-        runOnUiThread(() -> {
-            android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-            builder.setTitle("Phát hiện té ngã!");
-            builder.setMessage(String.format("Phát hiện chuyển động mạnh (%.2f m/s²).\n\nBạn có ổn không?", magnitude));
-            builder.setPositiveButton("Tôi ổn", (dialog, which) -> {
-                dialog.dismiss();
-            });
-            builder.setNegativeButton("Gọi khẩn cấp", (dialog, which) -> {
-                Toast.makeText(this, "Đang gọi số khẩn cấp...", Toast.LENGTH_SHORT).show();
-            });
-            builder.setCancelable(false);
-            builder.show();
-        });
+        runOnUiThread(() ->
+                new android.app.AlertDialog.Builder(this)
+                        .setTitle("Phát hiện té ngã!")
+                        .setMessage(String.format(
+                                "Phát hiện chuyển động mạnh (%.2f m/s²).\n\nBạn có ổn không?", magnitude))
+                        .setPositiveButton("Tôi ổn", (d, w) -> d.dismiss())
+                        .setNegativeButton("Gọi khẩn cấp", (d, w) ->
+                                Toast.makeText(this, "Đang gọi số khẩn cấp...", Toast.LENGTH_SHORT).show())
+                        .setCancelable(false).show()
+        );
     }
 
     @Override
@@ -327,79 +538,4 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         });
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer,
-                    SensorManager.SENSOR_DELAY_NORMAL);
-        }
-
-        updateCharts();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        sensorManager.unregisterListener(this);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (timeHandler != null) {
-            timeHandler.removeCallbacks(timeRunnable);
-        }
-
-        // Unbind BLE Service
-        if (bleServiceBound) {
-            unbindService(serviceConnection);
-            bleServiceBound = false;
-        }
-
-        // Unregister receiver
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(bleUpdateReceiver);
-    }
-
-    // Cập nhật biểu đồ
-    private void updateCharts() {
-        Log.d(TAG, "updateCharts called");
-
-        // Kiểm tra views có null không
-        if (heartRateChartView == null || oxygenChartView == null) {
-            Log.e(TAG, "ChartViews are null! Cannot update charts.");
-            return;
-        }
-
-        // Lấy dữ liệu nhịp tim
-        List<HealthDataManager.HealthDataPoint> heartRateData = dataManager.getHeartRateData();
-        Log.d(TAG, "Heart rate data size: " + heartRateData.size());
-
-        if (!heartRateData.isEmpty()) {
-            heartRateChartView.setData(heartRateData, Color.parseColor("#E53935"), 50, 120);
-            int avgHeartRate = dataManager.getAverageHeartRate();
-            tvHeartRateAvg.setText(avgHeartRate + " BPM");
-            Log.d(TAG, "Heart rate chart updated with avg: " + avgHeartRate);
-        } else {
-            tvHeartRateAvg.setText("-- BPM");
-            heartRateChartView.setData(null, Color.parseColor("#E53935"), 50, 120);
-            Log.d(TAG, "No heart rate data");
-        }
-
-        // Lấy dữ liệu oxy
-        List<HealthDataManager.HealthDataPoint> oxygenData = dataManager.getOxygenData();
-        Log.d(TAG, "Oxygen data size: " + oxygenData.size());
-
-        if (!oxygenData.isEmpty()) {
-            oxygenChartView.setData(oxygenData, Color.parseColor("#1E88E5"), 90, 100);
-            int avgOxygen = dataManager.getAverageOxygen();
-            tvOxygenAvg.setText(avgOxygen + "%");
-            Log.d(TAG, "Oxygen chart updated with avg: " + avgOxygen);
-        } else {
-            tvOxygenAvg.setText("--%");
-            oxygenChartView.setData(null, Color.parseColor("#1E88E5"), 90, 100);
-            Log.d(TAG, "No oxygen data");
-        }
-    }
 }

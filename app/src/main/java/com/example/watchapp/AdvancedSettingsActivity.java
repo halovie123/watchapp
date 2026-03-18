@@ -20,11 +20,13 @@ public class AdvancedSettingsActivity extends BaseActivity {
     private LinearLayout contactsContainer;
     private Button btnAddContact;
     private Button btnBack;
+    private NumberPicker pickerMinute, pickerSecond;
+    private Button btnTimeOk;
     private RadioGroup radioGroupLanguage;
     private TextView tvWatchName, tvWatchVersion;
     private List<String> emergencyContacts;
     private boolean isLoadingSettings = false; // Flag để tránh trigger listener khi load
-    private boolean isRecreating = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,13 +36,8 @@ public class AdvancedSettingsActivity extends BaseActivity {
         emergencyContacts = new ArrayList<>();
 
         initViews();
-        setupLanguageListener();
-        loadSettings();
-        setupListeners();
-    }
-
-    private void setupListeners() {
-        btnBack.setOnClickListener(v -> finish());
+        loadSettings(); // Load trước khi setup listener
+        setupListeners(); // Setup listener sau
     }
 
     private void initViews() {
@@ -51,11 +48,50 @@ public class AdvancedSettingsActivity extends BaseActivity {
         tvWatchName = findViewById(R.id.tvWatchName);
         tvWatchVersion = findViewById(R.id.tvWatchVersion);
 
-
-
     }
 
+    private void setupListeners() {
+        btnBack.setOnClickListener(v -> finish());
 
+        btnAddContact.setOnClickListener(v -> addContactField());
+
+
+        radioGroupLanguage.setOnCheckedChangeListener((group, checkedId) -> {
+            // QUAN TRỌNG: Chỉ xử lý khi KHÔNG đang load settings
+            if (isLoadingSettings) {
+                return;
+            }
+
+            // Lấy ngôn ngữ hiện tại
+            String currentLanguage = LocaleHelper.getPersistedLanguage(this);
+            String newLanguage;
+
+            if (checkedId == R.id.radioVietnamese) {
+                newLanguage = "vi";
+            } else if (checkedId == R.id.radioEnglish) {
+                newLanguage = "en";
+            } else {
+                return; // Không làm gì nếu không phải 2 nút này
+            }
+
+            // QUAN TRỌNG: Chỉ recreate nếu ngôn ngữ THẬT SỰ thay đổi
+            if (!currentLanguage.equals(newLanguage)) {
+                // Lưu ngôn ngữ mới
+                LocaleHelper.setLocale(this, newLanguage);
+
+                // Hiển thị toast
+                String toastMessage = newLanguage.equals("vi")
+                        ? "Đã chọn Tiếng Việt"
+                        : "Selected English";
+                Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show();
+
+                // Delay một chút để toast hiển thị trước khi recreate
+                new android.os.Handler().postDelayed(() -> {
+                    recreate();
+                }, 300);
+            }
+        });
+    }
 
     private void addContactField() {
         View contactView = getLayoutInflater().inflate(R.layout.item_contact, contactsContainer, false);
@@ -72,54 +108,35 @@ public class AdvancedSettingsActivity extends BaseActivity {
     }
 
     private void loadSettings() {
-        String language = LocaleHelper.getPersistedLanguage(this);
+        // BẬT flag để tránh trigger listener
+        isLoadingSettings = true;
 
-        if (language.equals("vi")) {
-            radioGroupLanguage.check(R.id.radioVietnamese);
-        } else {
-            radioGroupLanguage.check(R.id.radioEnglish);
-        }
-
-        // Load watch info...
+        // Load từ SharedPreferences
         android.content.SharedPreferences prefs = getSharedPreferences("WatchSettings", MODE_PRIVATE);
 
+        // Load language
+        String language = LocaleHelper.getPersistedLanguage(this);
+        if (language.equals("vi")) {
+            ((RadioButton) findViewById(R.id.radioVietnamese)).setChecked(true);
+        } else {
+            ((RadioButton) findViewById(R.id.radioEnglish)).setChecked(true);
+        }
+
+        // Load watch info
         String watchName = prefs.getString("watchName", "SmartWatch-3CG");
         String watchVersion = prefs.getString("watchVersion", "v1.1.0");
 
         tvWatchName.setText(getString(R.string.watch_name, watchName));
         tvWatchVersion.setText(getString(R.string.watch_version, watchVersion));
 
-        isInitializing = false;
-    }
+        // Load time (phút và giây)
+        int minute = prefs.getInt("checkMinute", 30);
+        int second = prefs.getInt("checkSecond", 0);
+        pickerMinute.setValue(minute);
+        pickerSecond.setValue(second);
 
-    private boolean isInitializing = true;
-
-    private void setupLanguageListener() {
-        radioGroupLanguage.setOnCheckedChangeListener((group, checkedId) -> {
-
-            if (isInitializing) return; // ✅ CHẶN INIT
-
-            String currentLanguage = LocaleHelper.getPersistedLanguage(this);
-            String newLanguage;
-
-            if (checkedId == R.id.radioVietnamese) {
-                newLanguage = "vi";
-            } else if (checkedId == R.id.radioEnglish) {
-                newLanguage = "en";
-            } else return;
-
-            if (!currentLanguage.equals(newLanguage)) {
-                LocaleHelper.setLocale(this, newLanguage);
-
-                String toastMessage = newLanguage.equals("vi")
-                        ? "Đã chọn Tiếng Việt"
-                        : "Selected English";
-
-                Toast.makeText(this, toastMessage, Toast.LENGTH_SHORT).show();
-
-                recreate(); // ✅ chỉ chạy khi user click thật
-            }
-        });
+        // TẮT flag sau khi load xong
+        isLoadingSettings = false;
     }
 
     private void saveCheckTime(int minute, int second) {

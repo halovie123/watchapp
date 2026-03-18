@@ -91,6 +91,8 @@
     <string name="confirm">Xác nhận</string>
     <string name="cancel">Hủy</string>
 
+
+
     <!-- Advanced Settings -->
     <string name="emergency_contacts">Email, SĐT Người Thân</string>
     <string name="emergency_contacts_desc">Thêm email, số điện thoại người thân để tự động gửi tin nhắn khi có báo động</string>

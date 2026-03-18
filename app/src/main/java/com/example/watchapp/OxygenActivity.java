@@ -1,25 +1,40 @@
 package com.example.watchapp;
 
+import androidx.annotation.NonNull;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
+import android.os.Handler;
+import android.widget.Button;
 import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.util.List;
+import java.util.Random;
 
-/**
- * OxygenActivity — displays real-time SpO2 data streamed from ESP32 via BLE.
- * No manual measure button; data arrives automatically from BLEService.
- */
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
 public class OxygenActivity extends BaseActivity {
-
-    private TextView tvOxygenLevel;
-    private TextView tvStatus;
-    private TextView tvAverage;
+    private static final String TAG = "OxygenActivity";
+    // UI
+    private TextView tvOxygenLevel, tvStatus, tvAverage;
     private ChartView chartView;
+    private Button btnMeasure, btnBack;
+    private boolean isMeasuring = false;
+    private Handler handler;
+    private Random random;
     private HealthDataManager dataManager;
+    // Firebase
+    private DatabaseReference oxygenRef;
+    private ValueEventListener oxygenListener;
+
 
     // ─── BLE Broadcast Receiver ──────────────────────────────
     private final BroadcastReceiver bleReceiver = new BroadcastReceiver() {
@@ -54,15 +69,19 @@ public class OxygenActivity extends BaseActivity {
         dataManager = HealthDataManager.getInstance(this);
 
         tvOxygenLevel = findViewById(R.id.tvOxygenLevel);
-        tvStatus      = findViewById(R.id.tvStatus);
+        tvStatus = findViewById(R.id.tvStatus);
         tvAverage     = findViewById(R.id.tvAverage);
         chartView     = findViewById(R.id.chartView);
-
-        // Back button
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
 
         // Render stored history on entry
         refreshChart();
+
+        // Lắng nghe Firebase — dữ liệu do MainActivity gửi lên mỗi 3s
+        oxygenRef = FirebaseDatabase.getInstance().getReference("oxygen_level");
+        startFirebaseListener();
+
     }
 
     @Override
@@ -127,4 +146,45 @@ public class OxygenActivity extends BaseActivity {
             tvAverage.setText(R.string.no_data);
         }
     }
+
+    private void startFirebaseListener() {
+        tvStatus.setText("⏳ Đang chờ dữ liệu...");
+
+        oxygenListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    tvOxygenLevel.setText("--");
+                    tvStatus.setText("Chưa có dữ liệu");
+                    return;
+                }
+
+                Integer spo2 = snapshot.child("value").getValue(Integer.class);
+                if (spo2 == null) return;
+
+                Log.d(TAG, "Firebase → " + spo2 + "%");
+
+                // Hiển thị lên vòng tròn
+                tvOxygenLevel.setText(String.valueOf(spo2));
+
+                // Trạng thái
+                if      (spo2 < 95) tvStatus.setText("Nồng độ oxy thấp!");
+                else if (spo2 < 97) tvStatus.setText("Nồng độ oxy hơi thấp");
+                else                tvStatus.setText("Nồng độ oxy bình thường");
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Lỗi: " + error.getMessage());
+                tvStatus.setText("Lỗi kết nối Firebase");
+            }
+        };
+
+        oxygenRef.addValueEventListener(oxygenListener);
+    }
+
+
+
+
+
 }
