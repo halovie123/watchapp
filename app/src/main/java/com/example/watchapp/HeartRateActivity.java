@@ -7,8 +7,6 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.widget.TextView;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import org.json.JSONException;
-import org.json.JSONObject;
 import java.util.List;
 
 /**
@@ -41,8 +39,7 @@ public class HeartRateActivity extends BaseActivity {
                     break;
 
                 case BLEService.ACTION_DATA_AVAILABLE:
-                    String json = intent.getStringExtra(BLEService.EXTRA_DATA);
-                    if (json != null) handleSensorData(json);
+                    handleSensorData(intent);
                     break;
             }
         }
@@ -85,44 +82,35 @@ public class HeartRateActivity extends BaseActivity {
     }
 
     // ─── Data handling ────────────────────────────────────────
-    private void handleSensorData(String jsonString) {
-        try {
-            JSONObject json = new JSONObject(jsonString);
+    private void handleSensorData(Intent intent) {
+        int bpm    = intent.getIntExtra(BLEService.EXTRA_BPM,    -1);
+        int finger = intent.getIntExtra(BLEService.EXTRA_FINGER, -1);
+        int motion = intent.getIntExtra(BLEService.EXTRA_MOTION,  0);
 
-            if (!json.has("heartRate")) return;
-            int hr = json.getInt("heartRate");
-
-            // -1 means algorithm has no valid result yet (finger not placed etc.)
-            if (hr < 0) {
-                tvHeartRate.setText("--");
-                tvStatus.setText(R.string.heart_rate_waiting);
-                return;
-            }
-
-            // Display live value
-            tvHeartRate.setText(hr + " BPM");
-
-            // Status based on physiological range
-            if (hr < 60) {
-                tvStatus.setText(R.string.heart_rate_low);
-            } else if (hr > 100) {
-                tvStatus.setText(R.string.heart_rate_high);
-            } else {
-                tvStatus.setText(R.string.heart_rate_normal);
-            }
-
-            // Show motion warning if significant noise was detected
-            if (json.has("motionPct") && json.getInt("motionPct") > 50) {
-                tvStatus.setText(R.string.heart_rate_motion_warning);
-            }
-
-            // Update chart and average (data already saved by BLEService →
-            //   HealthDataManager.saveHeartRateData)
-            refreshChart();
-
-        } catch (JSONException e) {
-            tvStatus.setText(R.string.data_parse_error);
+        if (finger == 0) {
+            tvHeartRate.setText("--");
+            tvStatus.setText("Chưa đặt tay lên cảm biến");
+            return;
         }
+        if (bpm <= 0) {
+            tvHeartRate.setText("--");
+            tvStatus.setText("Đang đo nhịp tim...");
+            return;
+        }
+
+        tvHeartRate.setText(bpm + " BPM");
+
+        if (motion == 1) {
+            tvStatus.setText("Cảnh báo: đang chuyển động");
+        } else if (bpm < 60) {
+            tvStatus.setText("Nhịp tim thấp");
+        } else if (bpm > 100) {
+            tvStatus.setText("Nhịp tim cao");
+        } else {
+            tvStatus.setText("Nhịp tim bình thường");
+        }
+
+        refreshChart();
     }
 
     private void refreshChart() {

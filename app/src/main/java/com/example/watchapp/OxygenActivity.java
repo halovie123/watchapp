@@ -7,8 +7,6 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.widget.TextView;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import org.json.JSONException;
-import org.json.JSONObject;
 import java.util.List;
 
 /**
@@ -41,8 +39,7 @@ public class OxygenActivity extends BaseActivity {
                     break;
 
                 case BLEService.ACTION_DATA_AVAILABLE:
-                    String json = intent.getStringExtra(BLEService.EXTRA_DATA);
-                    if (json != null) handleSensorData(json);
+                    handleSensorData(intent);
                     break;
             }
         }
@@ -85,43 +82,35 @@ public class OxygenActivity extends BaseActivity {
     }
 
     // ─── Data handling ────────────────────────────────────────
-    private void handleSensorData(String jsonString) {
-        try {
-            JSONObject json = new JSONObject(jsonString);
+    private void handleSensorData(Intent intent) {
+        int spo2   = intent.getIntExtra(BLEService.EXTRA_SPO2,   -1);
+        int finger = intent.getIntExtra(BLEService.EXTRA_FINGER, -1);
+        int motion = intent.getIntExtra(BLEService.EXTRA_MOTION,  0);
 
-            if (!json.has("spo2")) return;
-            int spo2 = json.getInt("spo2");
-
-            // -1 = algorithm not yet converged
-            if (spo2 < 0) {
-                tvOxygenLevel.setText("--");
-                tvStatus.setText(R.string.oxygen_waiting);
-                return;
-            }
-
-            // Display live value
-            tvOxygenLevel.setText(spo2 + "%");
-
-            // Status based on clinical threshold
-            if (spo2 < 90) {
-                tvStatus.setText(R.string.oxygen_critical);
-            } else if (spo2 < 95) {
-                tvStatus.setText(R.string.oxygen_low);
-            } else {
-                tvStatus.setText(R.string.oxygen_normal);
-            }
-
-            // Motion warning
-            if (json.has("motionPct") && json.getInt("motionPct") > 50) {
-                tvStatus.setText(R.string.oxygen_motion_warning);
-            }
-
-            // Refresh chart (BLEService already saved via HealthDataManager)
-            refreshChart();
-
-        } catch (JSONException e) {
-            tvStatus.setText(R.string.data_parse_error);
+        if (finger == 0) {
+            tvOxygenLevel.setText("--");
+            tvStatus.setText("Chưa đặt tay lên cảm biến");
+            return;
         }
+        if (spo2 <= 0) {
+            tvOxygenLevel.setText("--");
+            tvStatus.setText("Đang đo nồng độ oxy...");
+            return;
+        }
+
+        tvOxygenLevel.setText(spo2 + "%");
+
+        if (motion == 1) {
+            tvStatus.setText("Cảnh báo: đang chuyển động");
+        } else if (spo2 < 90) {
+            tvStatus.setText("Nồng độ oxy nguy hiểm!");
+        } else if (spo2 < 95) {
+            tvStatus.setText("Nồng độ oxy thấp");
+        } else {
+            tvStatus.setText("Nồng độ oxy bình thường");
+        }
+
+        refreshChart();
     }
 
     private void refreshChart() {
