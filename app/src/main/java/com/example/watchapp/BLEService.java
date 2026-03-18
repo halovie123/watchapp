@@ -38,6 +38,7 @@ public class BLEService extends Service {
     public static final String EXTRA_ACCEL_Y            = "com.example.watchapp.EXTRA_ACCEL_Y";
     public static final String EXTRA_ACCEL_Z            = "com.example.watchapp.EXTRA_ACCEL_Z";
     public static final String EXTRA_MOTION             = "com.example.watchapp.EXTRA_MOTION";
+    public static final String EXTRA_MAG                = "com.example.watchapp.EXTRA_MAG";
 
     private BluetoothManager  bluetoothManager;
     private BluetoothAdapter  bluetoothAdapter;
@@ -123,38 +124,38 @@ public class BLEService extends Service {
         Log.d(TAG, "Raw BLE data: " + raw);
 
         Intent intent = new Intent(action);
-        intent.putExtra(EXTRA_DATA, raw); // gửi raw string để Activity tự parse
+        intent.putExtra(EXTRA_DATA, raw);
 
-        // ── Parse "B:75,S:98,F:1,X:0.01,Y:-0.02,Z:1.00,M:0" ───────────────
-        int   bpm = -1, spo2 = -1, finger = -1, motion = -1;
-        float ax  = 0,  ay   = 0,  az     = 0;
+        // ── Parse format mới: "BPM,SpO2,Finger,Magnitude"
+        // Ví dụ: "75,98,1,0.971"
+        // [0]=BPM  [1]=SpO2  [2]=Finger  [3]=Magnitude(g)
+        int   bpm    = -1;
+        int   spo2   = -1;
+        int   finger = -1;
+        float mag    = -1f;
+
         try {
-            for (String part : raw.split(",")) {
-                // Dùng split với limit=2 để xử lý giá trị âm (Y:-0.02)
-                String[] kv = part.split(":", 2);
-                if (kv.length != 2) continue;
-                String key = kv[0].trim();
-                String val = kv[1].trim();
-                switch (key) {
-                    case "B": bpm    = Integer.parseInt(val);   break;
-                    case "S": spo2   = Integer.parseInt(val);   break;
-                    case "F": finger = Integer.parseInt(val);   break;
-                    case "X": ax     = Float.parseFloat(val);   break;
-                    case "Y": ay     = Float.parseFloat(val);   break;
-                    case "Z": az     = Float.parseFloat(val);   break;
-                    case "M": motion = Integer.parseInt(val);   break;
-                }
+            String[] parts = raw.split(",");
+            if (parts.length >= 4) {
+                // Format mới: "75,98,1,0.971"
+                bpm    = Integer.parseInt(parts[0].trim());
+                spo2   = Integer.parseInt(parts[1].trim());
+                finger = Integer.parseInt(parts[2].trim());
+                mag    = Float.parseFloat(parts[3].trim());
+            } else if (parts.length == 3) {
+                // Format cũ không có magnitude: "75,98,1"
+                bpm    = Integer.parseInt(parts[0].trim());
+                spo2   = Integer.parseInt(parts[1].trim());
+                finger = Integer.parseInt(parts[2].trim());
             }
         } catch (Exception e) {
             Log.e(TAG, "Parse error: " + e.getMessage() + " raw=" + raw);
         }
 
         Log.d(TAG, "Parsed → BPM=" + bpm + " SpO2=" + spo2
-                + " Finger=" + finger
-                + " Accel=(" + ax + "," + ay + "," + az + ")"
-                + " Motion=" + motion);
+                + " Finger=" + finger + " |g|=" + mag);
 
-        // Lưu + đính Extra vào Intent
+        // ── Lưu và đính Extra ─────────────────────────────────────────────
         if (bpm > 0 && bpm <= 220) {
             intent.putExtra(EXTRA_BPM, bpm);
             HealthDataManager.getInstance(this).saveHeartRateData(bpm);
@@ -163,11 +164,17 @@ public class BLEService extends Service {
             intent.putExtra(EXTRA_SPO2, spo2);
             HealthDataManager.getInstance(this).saveOxygenData(spo2);
         }
-        if (finger >= 0)  intent.putExtra(EXTRA_FINGER,  finger);
-        if (motion >= 0)  intent.putExtra(EXTRA_MOTION,  motion);
-        intent.putExtra(EXTRA_ACCEL_X, ax);
-        intent.putExtra(EXTRA_ACCEL_Y, ay);
-        intent.putExtra(EXTRA_ACCEL_Z, az);
+        if (finger >= 0) intent.putExtra(EXTRA_FINGER, finger);
+        if (mag    >= 0) intent.putExtra(EXTRA_MAG,    mag);
+
+        // Motion: phát hiện chuyển động nếu magnitude lệch xa 1g
+        // Lúc đứng yên |g| ≈ 1.0, khi té ngã hoặc di chuyển mạnh sẽ khác xa
+        int motion = 0;
+        if (mag > 0) {
+            float diff = Math.abs(mag - 1.0f);
+            motion = (diff > 0.3f) ? 1 : 0; // ngưỡng 0.3g
+        }
+        intent.putExtra(EXTRA_MOTION, motion);
 
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
