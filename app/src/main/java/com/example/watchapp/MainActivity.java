@@ -48,7 +48,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private static final String TAG = "MainActivity";
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final float FALL_THRESHOLD = 25.0f;
-    private static final int SIMULATE_INTERVAL_MS = 3000;
 
     // UI Components
     private TextView tvTime, tvDate, tvBatteryStatus;
@@ -76,15 +75,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private DatabaseReference healthRecordsRef;
     private ChildEventListener healthChildListener;
 
-    // Firebase — ghi giá trị MỚI NHẤT để HeartRateActivity / OxygenActivity hiển thị
-    private DatabaseReference heartRateDisplayRef;   // heart_rate/value
-    private DatabaseReference oxygenDisplayRef;      // oxygen_level/value
-
-    // Simulation — XÓA KHI CÓ CẢM BIẾN THẬT
-    private Handler simulateHandler;
-    private Random  random;
-    private boolean isSimulating = false;
-
     // =========================================================================
     //  LIFECYCLE
     // =========================================================================
@@ -96,8 +86,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
         Log.d(TAG, "onCreate started");
         dataManager = HealthDataManager.getInstance(this);
-        simulateHandler = new Handler();
-        random          = new Random();
 
         initViews();
         checkPermissions();
@@ -131,93 +119,23 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
 
         updateCharts();
-        startSimulation();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         sensorManager.unregisterListener(this);
-        // KHÔNG dừng simulation — tiếp tục gửi dù chuyển activity khác
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopSimulation();
         if (healthRecordsRef != null && healthChildListener != null)
             healthRecordsRef.removeEventListener(healthChildListener);
         if (timeHandler != null) timeHandler.removeCallbacks(timeRunnable);
         if (bleServiceBound) { unbindService(serviceConnection); bleServiceBound = false; }
         LocalBroadcastManager.getInstance(this).unregisterReceiver(bleUpdateReceiver);
     }
-
-    // =========================================================================
-    //  SIMULATION — random tất cả 4 loại dữ liệu mỗi 3 giây
-    //  XÓA startSimulation() & stopSimulation() KHI CÓ CẢM BIẾN THẬT
-    // =========================================================================
-
-    private void startSimulation() {
-        if (isSimulating) return;
-        isSimulating = true;
-
-        simulateHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (!isSimulating) return;
-
-                // ── Heart rate: 60–100 BPM ────────────────────────────────────
-                int bpm  = 60 + random.nextInt(41);
-
-                // ── SpO2: 95–100% ─────────────────────────────────────────────
-                int spo2 = 95 + random.nextInt(6);
-
-                pushHealthRecord(bpm, spo2);
-                simulateHandler.postDelayed(this, SIMULATE_INTERVAL_MS);
-            }
-        });
-    }
-
-    private void stopSimulation() {
-        isSimulating = false;
-        simulateHandler.removeCallbacksAndMessages(null);
-    }
-
-    private void pushHealthRecord(int bpm, int spo2) {
-
-        String timestamp = new SimpleDateFormat(
-                "dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(new Date());
-
-        // Random fall detection (yes/no)
-        String fall = random.nextBoolean() ? "yes" : "no";
-
-        Map<String, Object> record = new HashMap<>();
-        record.put("timestamp", timestamp);
-        record.put("heart_rate", bpm);
-        record.put("spo2", spo2);
-        record.put("fall_detection", fall);
-
-        healthRecordsRef.push().setValue(record)
-                .addOnSuccessListener(u -> Log.d(TAG,
-                        " HR=" + bpm + " SpO2=" + spo2 + " FALL=" + fall))
-                .addOnFailureListener(e -> Log.e(TAG, "❌ " + e.getMessage()));
-
-        // Latest value (giữ nguyên)
-        heartRateDisplayRef.setValue(bpm);
-        oxygenDisplayRef.setValue(spo2);
-
-        // Update local + chart
-        dataManager.saveHeartRateData(bpm);
-        dataManager.saveOxygenData(spo2);
-
-        runOnUiThread(() -> {
-            tvHeartRateAvg.setText(dataManager.getAverageHeartRate() + " BPM");
-            tvOxygenAvg.setText(dataManager.getAverageOxygen() + "%");
-            updateHeartRateChart();
-            updateOxygenChart();
-        });
-    }
-
 
     // =========================================================================
     //  PHÂN LOẠI CƯỜNG ĐỘ
@@ -249,8 +167,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
     private void setupFirebaseListener() {
         healthRecordsRef   = FirebaseDatabase.getInstance().getReference("health_records");
-        heartRateDisplayRef = FirebaseDatabase.getInstance().getReference("heart_rate").child("value");
-        oxygenDisplayRef    = FirebaseDatabase.getInstance().getReference("oxygen_level").child("value");
 
         healthChildListener = new ChildEventListener() {
             @Override

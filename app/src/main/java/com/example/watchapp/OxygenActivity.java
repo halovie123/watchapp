@@ -29,11 +29,12 @@ public class OxygenActivity extends BaseActivity {
     private Button btnMeasure, btnBack;
     private boolean isMeasuring = false;
     private Handler handler;
-    private Random random;
+    private Random random = new Random();
     private HealthDataManager dataManager;
     // Firebase
     private DatabaseReference oxygenRef;
     private ValueEventListener oxygenListener;
+    private DatabaseReference healthRecordsRef;
 
 
     // ─── BLE Broadcast Receiver ──────────────────────────────
@@ -80,6 +81,7 @@ public class OxygenActivity extends BaseActivity {
 
         // Lắng nghe Firebase — dữ liệu do MainActivity gửi lên mỗi 3s
         oxygenRef = FirebaseDatabase.getInstance().getReference("oxygen_level");
+        healthRecordsRef = FirebaseDatabase.getInstance().getReference("health_records");
         startFirebaseListener();
 
     }
@@ -129,7 +131,26 @@ public class OxygenActivity extends BaseActivity {
             tvStatus.setText("Nồng độ oxy bình thường");
         }
 
+        dataManager.saveOxygenData(spo2);
         refreshChart();
+        pushToFirebase(spo2);
+    }
+
+    private void pushToFirebase(int spo2) {
+        String timestamp = new java.text.SimpleDateFormat(
+                "dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
+
+        int lastBpm = dataManager.getAverageHeartRate(); // dùng giá trị bpm mới nhất từ local
+
+        java.util.Map<String, Object> record = new java.util.HashMap<>();
+        record.put("timestamp", timestamp);
+        record.put("heart_rate", lastBpm > 0 ? lastBpm : 0);
+        record.put("spo2", spo2);
+        record.put("fall_detection", random.nextBoolean() ? "yes" : "no");
+
+        healthRecordsRef.push().setValue(record)
+                .addOnSuccessListener(u -> Log.d(TAG, "✅ Firebase SpO2=" + spo2))
+                .addOnFailureListener(e -> Log.e(TAG, "❌ " + e.getMessage()));
     }
 
     private void refreshChart() {

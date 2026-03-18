@@ -129,11 +129,7 @@ public class AdvancedSettingsActivity extends BaseActivity {
         tvWatchName.setText(getString(R.string.watch_name, watchName));
         tvWatchVersion.setText(getString(R.string.watch_version, watchVersion));
 
-        // Load time (phút và giây)
-        int minute = prefs.getInt("checkMinute", 30);
-        int second = prefs.getInt("checkSecond", 0);
-        pickerMinute.setValue(minute);
-        pickerSecond.setValue(second);
+
 
         // TẮT flag sau khi load xong
         isLoadingSettings = false;

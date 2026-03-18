@@ -49,7 +49,6 @@ public class ChatboxActivity extends BaseActivity {
     private static final String TAG = "ChatboxActivity";
     private static final int PERMISSION_REQUEST_CODE = 200;
 
-    // ✅ Không có API key — AI chạy hoàn toàn local, không cần internet
 
     // ── UI ────────────────────────────────────────────────────────────────────
     private LinearLayout chatContainer;

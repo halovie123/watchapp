@@ -38,12 +38,13 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
     private Sensor heartRateSensor;
     private boolean isMeasuring = false;
     private Handler handler;
-    private Random random;
+    private Random random = new Random();
     private HealthDataManager dataManager;
 
     // Firebase
     private DatabaseReference heartRateRef;
     private ValueEventListener heartRateListener;
+    private DatabaseReference healthRecordsRef;
 
     // ─── BLE Broadcast Receiver ──────────────────────────────
     private final BroadcastReceiver bleReceiver = new BroadcastReceiver() {
@@ -91,6 +92,7 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
 
         // Lắng nghe Firebase — dữ liệu do MainActivity gửi lên mỗi 3s
         heartRateRef = FirebaseDatabase.getInstance().getReference("heart_rate");
+        healthRecordsRef = FirebaseDatabase.getInstance().getReference("health_records");
         startFirebaseListener();
     }
 
@@ -182,7 +184,26 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
             tvStatus.setText("Nhịp tim bình thường");
         }
 
+        dataManager.saveHeartRateData(bpm);
         refreshChart();
+        pushToFirebase(bpm);
+    }
+
+    private void pushToFirebase(int bpm) {
+        String timestamp = new java.text.SimpleDateFormat(
+                "dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
+
+        int lastSpo2 = dataManager.getAverageOxygen(); // dùng giá trị spo2 mới nhất từ local
+
+        java.util.Map<String, Object> record = new java.util.HashMap<>();
+        record.put("timestamp", timestamp);
+        record.put("heart_rate", bpm);
+        record.put("spo2", lastSpo2 > 0 ? lastSpo2 : 0);
+        record.put("fall_detection", random.nextBoolean() ? "yes" : "no");
+
+        healthRecordsRef.push().setValue(record)
+                .addOnSuccessListener(u -> Log.d(TAG, "✅ Firebase HR=" + bpm))
+                .addOnFailureListener(e -> Log.e(TAG, "❌ " + e.getMessage()));
     }
 
     // ─── SensorEventListener ─────────────────────────────────
@@ -198,6 +219,7 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
 
                 dataManager.saveHeartRateData(bpm);
                 refreshChart();
+                pushToFirebase(bpm);
             }
         }
     }
