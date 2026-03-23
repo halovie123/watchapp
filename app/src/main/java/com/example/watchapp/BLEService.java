@@ -153,9 +153,7 @@ public class BLEService extends Service {
         Intent intent = new Intent(action);
         intent.putExtra(EXTRA_DATA, raw);
 
-        // ══════════════════════════════════════════════════════════════════
         //  PARSE FORMAT MỚI: "B:0,S:0,F:0,AX:0.83,AY:-0.41,AZ:-0.52,M:10.33"
-        // ══════════════════════════════════════════════════════════════════
         int   bpm    = -1;
         int   spo2   = -1;
         int   finger = -1;
@@ -213,10 +211,7 @@ public class BLEService extends Service {
         if (mag >= 0) {
             intent.putExtra(EXTRA_MAG, mag);
 
-            // ══════════════════════════════════════════════════════════════
             //  FALL DETECTION with TensorFlow Lite Model
-            // ══════════════════════════════════════════════════════════════
-
             // Convert M từ m/s² sang g (1g = 9.8 m/s²)
             float magInG = mag / 9.8f;
 
