@@ -66,25 +66,11 @@ public class BLEScanActivity extends AppCompatActivity {
         bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        String savedLanguage = LocaleHelper.getPersistedLanguage(this);
-        String currentLanguage = getResources().getConfiguration().locale.getLanguage();
-
-        if (!savedLanguage.equals(currentLanguage)) {
-            recreate();
-            return;
-        }
-    }
-
     private void initViews() {
         recyclerView = findViewById(R.id.recyclerViewDevices);
         btnScan = findViewById(R.id.btnScan);
         btnBackToOnboarding = findViewById(R.id.btnBackToOnboarding);
         btnMockEnterMain = findViewById(R.id.btnMockEnterMain);
-
         progressBar = findViewById(R.id.progressBar);
         tvStatus = findViewById(R.id.tvStatus);
 
@@ -108,24 +94,11 @@ public class BLEScanActivity extends AppCompatActivity {
             finish();
         });
 
-        btnMockEnterMain.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                // (1) Giả lập đã kết nối BLE
-                SharedPreferences prefs =
-                        getSharedPreferences("AppPrefs", MODE_PRIVATE);
-                prefs.edit()
-                        .putBoolean("ble_connected", true)
-                        .apply();
-
-                // (2) Vào MainActivity
-                Intent intent =
-                        new Intent(BLEScanActivity.this, MainActivity.class);
-                startActivity(intent);
-                finish();
-            }
+        btnMockEnterMain.setOnClickListener(v -> {
+            Intent intent = new Intent(BLEScanActivity.this, MainActivity.class);
+            startActivity(intent);
         });
+
 
     }
 
@@ -240,9 +213,9 @@ public class BLEScanActivity extends AppCompatActivity {
         }
 
         scanning = false;
-        btnScan.setText(R.string.scan_devices);
+        btnScan.setText("Quét thiết bị");
         progressBar.setVisibility(View.GONE);
-        tvStatus.setText(R.string.found + deviceList.size() + R.string.devices);
+        tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
 
         Log.d(TAG, "Stopped BLE scan");
     }
@@ -255,58 +228,39 @@ public class BLEScanActivity extends AppCompatActivity {
 
             BluetoothDevice device = result.getDevice();
 
-            // Lấy tên device
-            String deviceName = null;
-            String deviceAddress = null;
+            // Lấy tên và địa chỉ — kiểm tra permission cho Android 12+
+            String deviceName    = null;
+            String deviceAddress = device.getAddress();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
                         Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                     deviceName = device.getName();
-                    deviceAddress = device.getAddress();
-                    Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
                 }
             } else {
                 deviceName = device.getName();
-                deviceAddress = device.getAddress();
             }
 
-            // ===== THAY ĐỔI: Bỏ qua device không có tên =====
+            // ── LỌC: bỏ qua thiết bị không có tên (Unknown Device) ──────────
             if (deviceName == null || deviceName.trim().isEmpty()) {
-                Log.d(TAG, "Skipping unnamed device: " + deviceAddress);
-                return; // Không thêm vào list
+                Log.d(TAG, "Skipped unnamed device: " + deviceAddress);
+                return;
             }
 
-            Log.d(TAG, "Found: " + deviceName + " (" + deviceAddress + ")");
+            Log.d(TAG, "Found named device: " + deviceName + " (" + deviceAddress + ")");
 
-            // Kiểm tra xem device đã có trong list chưa
-            boolean deviceExists = false;
+            // ── LỌC TRÙNG: kiểm tra theo địa chỉ MAC ────────────────────────
             for (BluetoothDevice d : deviceList) {
-                String existingAddress = null;
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (ActivityCompat.checkSelfPermission(BLEScanActivity.this,
-                            Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                        existingAddress = d.getAddress();
-                    }
-                } else {
-                    existingAddress = d.getAddress();
-                }
-
-                if (existingAddress != null && existingAddress.equals(deviceAddress)) {
-                    deviceExists = true;
-                    break;
-                }
+                if (d.getAddress().equals(deviceAddress)) return; // đã có rồi
             }
 
-            if (!deviceExists) {
-                deviceList.add(device);
+            // Thêm vào danh sách và cập nhật UI
+            deviceList.add(device);
+            runOnUiThread(() -> {
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
-                tvStatus.setText(R.string.found + deviceList.size() + R.string.devices);
-                Log.d(TAG, "Added device: " + deviceAddress);
                 tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
-                Log.d(TAG, "Added device: " + deviceName + " (" + deviceAddress + ")");
-            }
+            });
+            Log.d(TAG, "Added: " + deviceName + " (" + deviceAddress + ")");
         }
 
         @Override

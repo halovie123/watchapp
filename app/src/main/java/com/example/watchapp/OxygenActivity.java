@@ -1,27 +1,41 @@
 package com.example.watchapp;
 
+import androidx.annotation.NonNull;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
+import android.os.Handler;
+import android.widget.Button;
 import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import org.json.JSONException;
-import org.json.JSONObject;
 import java.util.List;
+import java.util.Random;
 
-/**
- * OxygenActivity — displays real-time SpO2 data streamed from ESP32 via BLE.
- * No manual measure button; data arrives automatically from BLEService.
- */
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
 public class OxygenActivity extends BaseActivity {
-
-    private TextView tvOxygenLevel;
-    private TextView tvStatus;
-    private TextView tvAverage;
+    private static final String TAG = "OxygenActivity";
+    // UI
+    private TextView tvOxygenLevel, tvStatus, tvAverage;
     private ChartView chartView;
+    private Button btnMeasure, btnBack;
+    private boolean isMeasuring = false;
+    private Handler handler;
+    private Random random = new Random();
     private HealthDataManager dataManager;
+    // Firebase
+    private DatabaseReference oxygenRef;
+    private ValueEventListener oxygenListener;
+    private DatabaseReference healthRecordsRef;
+
 
     // ─── BLE Broadcast Receiver ──────────────────────────────
     private final BroadcastReceiver bleReceiver = new BroadcastReceiver() {
@@ -41,8 +55,7 @@ public class OxygenActivity extends BaseActivity {
                     break;
 
                 case BLEService.ACTION_DATA_AVAILABLE:
-                    String json = intent.getStringExtra(BLEService.EXTRA_DATA);
-                    if (json != null) handleSensorData(json);
+                    handleSensorData(intent);
                     break;
             }
         }
@@ -57,15 +70,20 @@ public class OxygenActivity extends BaseActivity {
         dataManager = HealthDataManager.getInstance(this);
 
         tvOxygenLevel = findViewById(R.id.tvOxygenLevel);
-        tvStatus      = findViewById(R.id.tvStatus);
+        tvStatus = findViewById(R.id.tvStatus);
         tvAverage     = findViewById(R.id.tvAverage);
         chartView     = findViewById(R.id.chartView);
-
-        // Back button
-        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        btnBack = findViewById(R.id.btnBack);
+        btnBack.setOnClickListener(v -> finish());
 
         // Render stored history on entry
         refreshChart();
+
+        // Lắng nghe Firebase — dữ liệu do MainActivity gửi lên mỗi 3s
+        oxygenRef = FirebaseDatabase.getInstance().getReference("oxygen_level");
+        healthRecordsRef = FirebaseDatabase.getInstance().getReference("health_records");
+        startFirebaseListener();
+
     }
 
     @Override
@@ -85,43 +103,54 @@ public class OxygenActivity extends BaseActivity {
     }
 
     // ─── Data handling ────────────────────────────────────────
-    private void handleSensorData(String jsonString) {
-        try {
-            JSONObject json = new JSONObject(jsonString);
+    private void handleSensorData(Intent intent) {
+        int spo2   = intent.getIntExtra(BLEService.EXTRA_SPO2,   -1);
+        int finger = intent.getIntExtra(BLEService.EXTRA_FINGER, -1);
+        int motion = intent.getIntExtra(BLEService.EXTRA_MOTION,  0);
 
-            if (!json.has("spo2")) return;
-            int spo2 = json.getInt("spo2");
-
-            // -1 = algorithm not yet converged
-            if (spo2 < 0) {
-                tvOxygenLevel.setText("--");
-                tvStatus.setText(R.string.oxygen_waiting);
-                return;
-            }
-
-            // Display live value
-            tvOxygenLevel.setText(spo2 + "%");
-
-            // Status based on clinical threshold
-            if (spo2 < 90) {
-                tvStatus.setText(R.string.oxygen_critical);
-            } else if (spo2 < 95) {
-                tvStatus.setText(R.string.oxygen_low);
-            } else {
-                tvStatus.setText(R.string.oxygen_normal);
-            }
-
-            // Motion warning
-            if (json.has("motionPct") && json.getInt("motionPct") > 50) {
-                tvStatus.setText(R.string.oxygen_motion_warning);
-            }
-
-            // Refresh chart (BLEService already saved via HealthDataManager)
-            refreshChart();
-
-        } catch (JSONException e) {
-            tvStatus.setText(R.string.data_parse_error);
+        if (finger == 0) {
+            tvOxygenLevel.setText("--");
+            tvStatus.setText("Chưa đặt tay lên cảm biến");
+            return;
         }
+        if (spo2 <= 0) {
+            tvOxygenLevel.setText("--");
+            tvStatus.setText("Đang đo nồng độ oxy...");
+            return;
+        }
+
+        tvOxygenLevel.setText(spo2 + "%");
+
+        if (motion == 1) {
+            tvStatus.setText("Cảnh báo: đang chuyển động");
+        } else if (spo2 < 90) {
+            tvStatus.setText("Nồng độ oxy nguy hiểm!");
+        } else if (spo2 < 95) {
+            tvStatus.setText("Nồng độ oxy thấp");
+        } else {
+            tvStatus.setText("Nồng độ oxy bình thường");
+        }
+
+        dataManager.saveOxygenData(spo2);
+        refreshChart();
+        pushToFirebase(spo2);
+    }
+
+    private void pushToFirebase(int spo2) {
+        String timestamp = new java.text.SimpleDateFormat(
+                "dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
+
+        int lastBpm = dataManager.getAverageHeartRate(); // dùng giá trị bpm mới nhất từ local
+
+        java.util.Map<String, Object> record = new java.util.HashMap<>();
+        record.put("timestamp", timestamp);
+        record.put("heart_rate", lastBpm > 0 ? lastBpm : 0);
+        record.put("spo2", spo2);
+        record.put("fall_detection", random.nextBoolean() ? "yes" : "no");
+
+        healthRecordsRef.push().setValue(record)
+                .addOnSuccessListener(u -> Log.d(TAG, "✅ Firebase SpO2=" + spo2))
+                .addOnFailureListener(e -> Log.e(TAG, "❌ " + e.getMessage()));
     }
 
     private void refreshChart() {
@@ -138,4 +167,45 @@ public class OxygenActivity extends BaseActivity {
             tvAverage.setText(R.string.no_data);
         }
     }
+
+    private void startFirebaseListener() {
+        tvStatus.setText("⏳ Đang chờ dữ liệu...");
+
+        oxygenListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    tvOxygenLevel.setText("--");
+                    tvStatus.setText("Chưa có dữ liệu");
+                    return;
+                }
+
+                Integer spo2 = snapshot.child("value").getValue(Integer.class);
+                if (spo2 == null) return;
+
+                Log.d(TAG, "Firebase → " + spo2 + "%");
+
+                // Hiển thị lên vòng tròn
+                tvOxygenLevel.setText(String.valueOf(spo2));
+
+                // Trạng thái
+                if      (spo2 < 95) tvStatus.setText("Nồng độ oxy thấp!");
+                else if (spo2 < 97) tvStatus.setText("Nồng độ oxy hơi thấp");
+                else                tvStatus.setText("Nồng độ oxy bình thường");
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Lỗi: " + error.getMessage());
+                tvStatus.setText("Lỗi kết nối Firebase");
+            }
+        };
+
+        oxygenRef.addValueEventListener(oxygenListener);
+    }
+
+
+
+
+
 }

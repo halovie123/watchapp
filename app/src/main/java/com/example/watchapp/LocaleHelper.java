@@ -34,8 +34,7 @@ public class LocaleHelper {
         Locale locale = new Locale(language);
         Locale.setDefault(locale);
 
-        Resources resources = context.getResources();
-        Configuration configuration = new Configuration(resources.getConfiguration());
+        Configuration configuration = new Configuration(context.getResources().getConfiguration());
         configuration.setLocale(locale);
 
         return context.createConfigurationContext(configuration);
