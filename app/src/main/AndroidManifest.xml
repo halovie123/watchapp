@@ -9,30 +9,29 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Quyền INTERNET  -->
+    <!-- Quyền INTERNET -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Bluetooth Permissions -->
-    <uses-permission android:name="android.permission.BLUETOOTH"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-        android:maxSdkVersion="30" />
+    <!-- Bluetooth Permissions - Hỗ trợ cả Android 10 và Android 12+ -->
+    <!-- Android 10 và thấp hơn dùng BLUETOOTH và BLUETOOTH_ADMIN -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+
+    <!-- Android 12+ (API 31+) dùng BLUETOOTH_SCAN và BLUETOOTH_CONNECT -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
         tools:targetApi="s" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="s" />
 
-    <!-- Location - Required for BLE scan -->
+    <!-- Location - BẮT BUỘC cho BLE scan trên Android 10 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <uses-feature android:name="android.hardware.bluetooth_le"
-        android:required="true"/>
-
     <!-- Tính năng phần cứng -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
     <uses-feature android:name="android.hardware.sensor.heartrate" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -53,18 +52,18 @@
             </intent-filter>
         </activity>
 
-        <!-- Main Activity -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar" />
-
         <!-- BLE Scan Activity -->
         <activity
             android:name=".BLEScanActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar"
             android:label="Quét thiết bị BLE" />
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <!-- Heart Rate Activity -->
         <activity
@@ -78,27 +77,28 @@
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <!-- Advanced Settings Activity -->
         <activity
             android:name=".AdvancedSettingsActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar" />
 
+        <!-- Fall Detection Activity -->
         <activity
             android:name=".FallDetectionActivity"
             android:exported="false"
             android:theme="@style/AppTheme.NoActionBar"/>
 
+        <!-- Chatbox Activity -->
         <activity
             android:name=".ChatboxActivity"
             android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
 
         <!-- BLE Service -->
         <service

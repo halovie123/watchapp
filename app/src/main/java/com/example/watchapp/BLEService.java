@@ -182,7 +182,16 @@ public class BLEService extends Service {
                 } else if (part.startsWith("AZ:")) {
                     az = Float.parseFloat(part.substring(3));
                 } else if (part.startsWith("M:")) {
-                    mag = Float.parseFloat(part.substring(2));
+                    String magStr = part.substring(2);
+                    // Xử lý trường hợp có nhiều giá trị cách nhau bởi |
+                    if (magStr.contains("|")) {
+                        String[] magParts = magStr.split("\\|");
+                        // Lấy giá trị đầu tiên hoặc tính trung bình
+                        mag = Float.parseFloat(magParts[0]);
+                        // Hoặc có thể lấy cả 3 giá trị nếu cần
+                    } else {
+                        mag = Float.parseFloat(magStr);
+                    }
                 }
             }
 
