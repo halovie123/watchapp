@@ -1,0 +1,2 @@
+androidx.viewpager2
+styleable ViewPager2 android_orientation
