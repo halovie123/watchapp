@@ -100,13 +100,8 @@
     <string name="add_contact_hint">Thêm email (chú thích)</string>
     <string name="add_person">+ Thêm người thân</string>
     <string name="contact_deleted">Đã xóa người thân</string>
+    <string name="save">Lưu</string>
 
-    <string name="check_cycle">Chu kỳ đo</string>
-    <string name="check_once_every">1 lần đo mỗi</string>
-    <string name="minute">Phút</string>
-    <string name="second">Giây</string>
-    <string name="ok">OK</string>
-    <string name="saved_check_cycle">Đã lưu chu kỳ đo: %1$d phút %2$d giây</string>
 
     <string name="language">Ngôn ngữ</string>
     <string name="vietnamese">Tiếng Việt</string>

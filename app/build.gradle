@@ -6,6 +6,17 @@ plugins {
 android {
     compileSdk 36
 
+    android {
+        packagingOptions {
+            resources {
+                excludes += [
+                        "META-INF/NOTICE.md",
+                        "META-INF/LICENSE.md"
+                ]
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.example.watchapp"
         minSdk 24
@@ -83,7 +94,9 @@ dependencies {
     implementation 'com.google.ai.client.generativeai:generativeai:0.9.0'
     // Add the dependency for the Firebase SDK for Google Analytics
     implementation("com.google.firebase:firebase-analytics")
-
+    // Send email
+    implementation 'com.sun.mail:android-mail:1.6.7'
+    implementation 'com.sun.mail:android-activation:1.6.7'
 
 
 
