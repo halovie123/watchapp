@@ -41,6 +41,10 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
     private Random random = new Random();
     private HealthDataManager dataManager;
 
+    // random fall_detection
+    private String currentFallState = "no";
+    private long lastChangeTime = 0;
+
     // Firebase
     private DatabaseReference heartRateRef;
     private ValueEventListener heartRateListener;
@@ -153,7 +157,20 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
     }
 
 
+    //random falldetection
+    private String getFallStateControlled() {
+        long now = System.currentTimeMillis();
 
+        long duration = currentFallState.equals("yes") ? 30000 : 10000;
+
+        if (now - lastChangeTime > duration) {
+            // đổi trạng thái
+            currentFallState = currentFallState.equals("yes") ? "no" : "yes";
+            lastChangeTime = now;
+        }
+
+        return currentFallState;
+    }
 
 
     // ─── Data handling ────────────────────────────────────────
@@ -199,7 +216,7 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
         record.put("timestamp", timestamp);
         record.put("heart_rate", bpm);
         record.put("spo2", lastSpo2 > 0 ? lastSpo2 : 0);
-        record.put("fall_detection", random.nextBoolean() ? "yes" : "no");
+        record.put("fall_detection", getFallStateControlled());
 
         healthRecordsRef.push().setValue(record)
                 .addOnSuccessListener(u -> Log.d(TAG, "✅ Firebase HR=" + bpm))
