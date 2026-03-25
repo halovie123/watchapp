@@ -1,6 +1,7 @@
 package com.example.watchapp;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -15,13 +16,14 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
+
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
@@ -34,8 +36,12 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +55,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final float FALL_THRESHOLD = 25.0f;
 
-    // UI Components
+    // ── UI Components ─────────────────────────────────────────────────────────
     private TextView tvTime, tvDate, tvBatteryStatus;
     private TextView tvHeartRateAvg, tvOxygenAvg;
     private CardView cardHeartRate, cardOxygen, cardFallDetection, cardDisplay, cardAdvanced;
@@ -57,23 +63,29 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private FloatingActionButton fabChat;
     private ChartView heartRateChartView, oxygenChartView;
 
-    // BLE Service (background only)
+    // ── BLE Service ───────────────────────────────────────────────────────────
     private BLEService bleService;
     private boolean bleServiceBound = false;
     private String connectedDeviceAddress;
     private String connectedDeviceName;
 
-    // Sensor (chỉ dùng accelerometer để phát hiện té ngã thật)
+    // ── Sensor ────────────────────────────────────────────────────────────────
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Handler timeHandler;
     private Runnable timeRunnable;
     private HealthDataManager dataManager;
     private long lastFallDetectionTime = 0;
+    private double lastMagnitude = 0; // ← lưu magnitude lần té gần nhất
 
-    // Firebase — ghi vào health_records (push, không ghi đè, lưu lịch sử)
+    // ── Firebase ──────────────────────────────────────────────────────────────
     private DatabaseReference healthRecordsRef;
+    private DatabaseReference fallStateRef;      // ← node riêng cho trạng thái té ngã
     private ChildEventListener healthChildListener;
+
+    // ── Fall detection dialog ─────────────────────────────────────────────────
+    private AlertDialog fallAlertDialog;         // ← giữ tham chiếu để dismiss khi timeout
+    private CountDownTimer fallCountDownTimer;   // ← giữ tham chiếu để cancel nếu user phản hồi
 
     // =========================================================================
     //  LIFECYCLE
@@ -94,6 +106,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         setupClickListeners();
         setupFirebaseListener();
 
+        // ← Khởi tạo node fall_state trên Firebase
+        fallStateRef = FirebaseDatabase.getInstance().getReference("fall_state");
+
         // Bind BLE Service
         Intent gattServiceIntent = new Intent(this, BLEService.class);
         bindService(gattServiceIntent, serviceConnection, BIND_AUTO_CREATE);
@@ -105,7 +120,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         loadSavedConnection();
 
         Log.d(TAG, "onCreate finished");
-
     }
 
     @Override
@@ -135,10 +149,14 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         if (timeHandler != null) timeHandler.removeCallbacks(timeRunnable);
         if (bleServiceBound) { unbindService(serviceConnection); bleServiceBound = false; }
         LocalBroadcastManager.getInstance(this).unregisterReceiver(bleUpdateReceiver);
+
+        // Hủy countdown nếu Activity bị destroy giữa chừng
+        if (fallCountDownTimer != null) fallCountDownTimer.cancel();
+        if (fallAlertDialog != null && fallAlertDialog.isShowing()) fallAlertDialog.dismiss();
     }
 
     // =========================================================================
-    //  PHÂN LOẠI CƯỜNG ĐỘ
+    //  PHÂN LOẠI CƯỜNG ĐỘ (giữ nguyên từ file gốc)
     // =========================================================================
 
     private String classifyMovement(float x, float y, float z) {
@@ -149,6 +167,7 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         if (mag < 10f) return "moderate";
         return "high";
     }
+
     private String classifyRotation(float x, float y, float z) {
         float mag = (float) Math.sqrt(x*x + y*y + z*z);
         if (mag < 0.1f) return "none";
@@ -162,11 +181,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     // =========================================================================
-    //  FIREBASE — LẮNG NGHE BẢN GHI MỚI → CẬP NHẬT BIỂU ĐỒ
+    //  FIREBASE — LẮNG NGHE BẢN GHI MỚI → CẬP NHẬT BIỂU ĐỒ (giữ nguyên)
     // =========================================================================
 
     private void setupFirebaseListener() {
-        healthRecordsRef   = FirebaseDatabase.getInstance().getReference("health_records");
+        healthRecordsRef = FirebaseDatabase.getInstance().getReference("health_records");
 
         healthChildListener = new ChildEventListener() {
             @Override
@@ -185,12 +204,11 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             }
         };
 
-        // Chỉ tải 50 bản ghi gần nhất
         healthRecordsRef.limitToLast(50).addChildEventListener(healthChildListener);
     }
 
     // =========================================================================
-    //  BIỂU ĐỒ
+    //  BIỂU ĐỒ (giữ nguyên từ file gốc)
     // =========================================================================
 
     private void updateHeartRateChart() {
@@ -228,32 +246,27 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     // =========================================================================
-    //  PHẦN GIỮ NGUYÊN
+    //  INIT VIEWS (giữ nguyên từ file gốc)
     // =========================================================================
 
     private void initViews() {
-        tvTime = findViewById(R.id.tvTime);
-        tvDate = findViewById(R.id.tvDate);
-        tvBatteryStatus = findViewById(R.id.tvBatteryStatus);
-        tvHeartRateAvg = findViewById(R.id.tvHeartRateAvg);
-        tvOxygenAvg = findViewById(R.id.tvOxygenAvg);
-        btnBackToOnboarding = findViewById(R.id.btnBackToOnboarding);
-        fabChat = findViewById(R.id.fabChat);
-        cardHeartRate = findViewById(R.id.cardHeartRate);
-        cardOxygen = findViewById(R.id.cardOxygen);
-        cardFallDetection = findViewById(R.id.cardFallDetection);
-        cardDisplay = findViewById(R.id.cardDisplay);
-        cardAdvanced = findViewById(R.id.cardAdvanced);
+        tvTime             = findViewById(R.id.tvTime);
+        tvDate             = findViewById(R.id.tvDate);
+        tvBatteryStatus    = findViewById(R.id.tvBatteryStatus);
+        tvHeartRateAvg     = findViewById(R.id.tvHeartRateAvg);
+        tvOxygenAvg        = findViewById(R.id.tvOxygenAvg);
+        btnBackToOnboarding= findViewById(R.id.btnBackToOnboarding);
+        fabChat            = findViewById(R.id.fabChat);
+        cardHeartRate      = findViewById(R.id.cardHeartRate);
+        cardOxygen         = findViewById(R.id.cardOxygen);
+        cardFallDetection  = findViewById(R.id.cardFallDetection);
+        cardDisplay        = findViewById(R.id.cardDisplay);
+        cardAdvanced       = findViewById(R.id.cardAdvanced);
         heartRateChartView = findViewById(R.id.heartRateChartView);
-        oxygenChartView = findViewById(R.id.oxygenChartView);
+        oxygenChartView    = findViewById(R.id.oxygenChartView);
 
-        // Kiểm tra null
-        if (heartRateChartView == null) {
-            Log.e(TAG, "heartRateChartView is NULL!");
-        }
-        if (oxygenChartView == null) {
-            Log.e(TAG, "oxygenChartView is NULL!");
-        }
+        if (heartRateChartView == null) Log.e(TAG, "heartRateChartView is NULL!");
+        if (oxygenChartView == null)    Log.e(TAG, "oxygenChartView is NULL!");
 
         Log.d(TAG, "Views initialized");
     }
@@ -263,7 +276,6 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
                         != PackageManager.PERMISSION_GRANTED) {
-
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.BODY_SENSORS,
                             Manifest.permission.ACTIVITY_RECOGNITION},
@@ -274,14 +286,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private void setupSensors() {
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-
         if (accelerometer != null) {
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         }
     }
 
     private void startClock() {
-        timeHandler = new Handler();
+        timeHandler  = new Handler();
         timeRunnable = new Runnable() {
             @Override
             public void run() {
@@ -294,13 +305,8 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
     private void updateDateTime() {
         Locale currentLocale = getResources().getConfiguration().locale;
-
-        SimpleDateFormat timeFormat =
-                new SimpleDateFormat("HH:mm", currentLocale);
-
-        SimpleDateFormat dateFormat =
-                new SimpleDateFormat("EEEE, dd MMMM yyyy", currentLocale);
-
+        SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", currentLocale);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, dd MMMM yyyy", currentLocale);
         Date now = new Date();
         tvTime.setText(timeFormat.format(now));
         tvDate.setText(dateFormat.format(now));
@@ -327,21 +333,19 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 startActivity(new Intent(this, ChatboxActivity.class)));
     }
 
-    // BLE Service Connection
+    // =========================================================================
+    //  BLE (giữ nguyên từ file gốc)
+    // =========================================================================
+
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             BLEService.LocalBinder binder = (BLEService.LocalBinder) service;
             bleService = binder.getService();
             bleServiceBound = true;
-
-            if (!bleService.initialize()) {
-                Log.e(TAG, "Unable to initialize Bluetooth");
-            }
-
+            if (!bleService.initialize()) Log.e(TAG, "Unable to initialize Bluetooth");
             Log.d(TAG, "BLE Service connected");
         }
-
         @Override
         public void onServiceDisconnected(ComponentName name) {
             bleService = null;
@@ -350,12 +354,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
         }
     };
 
-    // BLE Broadcast Receiver
     private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-
             if (BLEService.ACTION_GATT_CONNECTED.equals(action)) {
                 Toast.makeText(MainActivity.this, "Đã kết nối với đồng hồ", Toast.LENGTH_SHORT).show();
                 tvBatteryStatus.setText("Đã kết nối với " + connectedDeviceName);
@@ -368,8 +370,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 String data = intent.getStringExtra(BLEService.EXTRA_DATA);
                 handleReceivedData(data);
             } else if ("com.example.watchapp.FALL_DETECTED".equals(action)) {
+                // ← Trước: gọi showFallAlert(magnitude) cũ (không có countdown, không gửi email)
+                // ← Sau:   gọi showFallCountdownDialog(magnitude) — có đếm ngược + gửi email
                 double magnitude = intent.getDoubleExtra("magnitude", 0);
-                showFallAlert(magnitude);
+                showFallCountdownDialog(magnitude);
             }
         }
     };
@@ -387,13 +391,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private void loadSavedConnection() {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         String savedAddress = prefs.getString("connectedDeviceAddress", null);
-        String savedName = prefs.getString("connectedDeviceName", null);
-
+        String savedName    = prefs.getString("connectedDeviceName",    null);
         if (savedAddress != null && savedName != null) {
             connectedDeviceAddress = savedAddress;
-            connectedDeviceName = savedName;
-
-            // Tự động kết nối lại
+            connectedDeviceName    = savedName;
             new Handler().postDelayed(() -> {
                 if (bleService != null && !bleService.isConnected()) {
                     bleService.connect(savedAddress);
@@ -405,26 +406,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
     private void handleReceivedData(String jsonData) {
         if (jsonData == null) return;
-
         Log.d(TAG, "Received data: " + jsonData);
-
-        // Dữ liệu đã được parse và lưu trong BLEService
-        // Chỉ cần cập nhật UI
         runOnUiThread(() -> updateCharts());
     }
 
-    private void showFallAlert(double magnitude) {
-        runOnUiThread(() ->
-                new android.app.AlertDialog.Builder(this)
-                        .setTitle("Phát hiện té ngã!")
-                        .setMessage(String.format(
-                                "Phát hiện chuyển động mạnh (%.2f m/s²).\n\nBạn có ổn không?", magnitude))
-                        .setPositiveButton("Tôi ổn", (d, w) -> d.dismiss())
-                        .setNegativeButton("Gọi khẩn cấp", (d, w) ->
-                                Toast.makeText(this, "Đang gọi số khẩn cấp...", Toast.LENGTH_SHORT).show())
-                        .setCancelable(false).show()
-        );
-    }
+    // =========================================================================
+    //  ACCELEROMETER — phát hiện té ngã
+    // =========================================================================
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -433,13 +421,14 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
             float y = event.values[1];
             float z = event.values[2];
 
-            float acceleration = (float) Math.sqrt(x*x + y*y + z*z);
+            float acceleration = (float) Math.sqrt(x * x + y * y + z * z);
 
             long currentTime = System.currentTimeMillis();
             if (acceleration > FALL_THRESHOLD &&
                     currentTime - lastFallDetectionTime > 5000) {
                 lastFallDetectionTime = currentTime;
-                detectFall();
+                lastMagnitude = acceleration; // ← lưu để truyền vào dialog
+                showFallCountdownDialog(lastMagnitude); // ← gọi trực tiếp, bỏ detectFall() cũ
             }
         }
     }
@@ -447,11 +436,154 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
-    private void detectFall() {
+    // =========================================================================
+    //  FALL DETECTION FLOW — dialog đếm ngược + gửi email
+    // =========================================================================
+
+    /**
+     * Hiển thị dialog hỏi người dùng sau khi phát hiện té.
+     * Đếm ngược 10 giây — nếu không phản hồi sẽ tự động gửi cảnh báo.
+     */
+    private void showFallCountdownDialog(final double magnitude) {
         runOnUiThread(() -> {
-            Toast.makeText(this, "Phát hiện té ngã! Bạn có ổn không?",
-                    Toast.LENGTH_LONG).show();
+            // Nếu đang có dialog cũ thì bỏ qua (tránh hiện 2 dialog chồng nhau)
+            if (fallAlertDialog != null && fallAlertDialog.isShowing()) return;
+
+            // View đếm ngược nhúng vào dialog
+            TextView tvCountdown = new TextView(this);
+            tvCountdown.setText("Tự động gọi khẩn cấp sau: 10 giây");
+            tvCountdown.setPadding(64, 16, 64, 0);
+            tvCountdown.setTextSize(14f);
+
+            fallAlertDialog = new AlertDialog.Builder(this)
+                    .setTitle("⚠️ Phát hiện té ngã!")
+                    .setMessage(String.format(
+                            "Phát hiện chuyển động mạnh (%.2f m/s²).\nBạn có ổn không?",
+                            magnitude))
+                    .setView(tvCountdown)
+                    .setCancelable(false)
+                    // Nút 1: người dùng ổn → Firebase = "no", KHÔNG gửi email
+                    .setPositiveButton("Tôi ổn", (d, w) -> {
+                        cancelCountdown();
+                        onFallResponse(false, magnitude);
+                    })
+                    // Nút 2: xác nhận bị té → Firebase = "yes", gửi email
+                    .setNegativeButton("Tôi bị té!", (d, w) -> {
+                        cancelCountdown();
+                        onFallResponse(true, magnitude);
+                    })
+                    .create();
+
+            fallAlertDialog.show();
+
+            // Bộ đếm ngược 10 giây
+            fallCountDownTimer = new CountDownTimer(10_000, 1_000) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    long seconds = millisUntilFinished / 1_000;
+                    runOnUiThread(() ->
+                            tvCountdown.setText("Tự động gọi khẩn cấp sau: " + seconds + " giây"));
+                }
+
+                @Override
+                public void onFinish() {
+                    // Hết 10 giây, không phản hồi → coi như bị té
+                    if (fallAlertDialog != null && fallAlertDialog.isShowing()) {
+                        fallAlertDialog.dismiss();
+                        fallAlertDialog = null;
+                    }
+                    onFallResponse(true, magnitude); // timeout → gửi cảnh báo
+                }
+            }.start();
         });
     }
 
+    /** Hủy countdown khi user đã bấm nút */
+    private void cancelCountdown() {
+        if (fallCountDownTimer != null) {
+            fallCountDownTimer.cancel();
+            fallCountDownTimer = null;
+        }
+    }
+
+    /**
+     * Xử lý sau khi có phản hồi (user bấm nút hoặc timeout).
+     *
+     * @param isFall true  = xác nhận bị té → Firebase "yes" + gửi email
+     *               false = người dùng ổn  → Firebase "no"
+     */
+    private void onFallResponse(boolean isFall, double magnitude) {
+        if (isFall) {
+            // 1. Cập nhật Firebase → "yes"
+            updateFallStateFirebase("yes", magnitude);
+
+            // 2. Lấy danh sách email từ AdvancedSettings
+            List<String> recipients = AdvancedSettingsActivity.getEmergencyEmails(this);
+
+            // 3. Tên đồng hồ
+            String watchName = getSharedPreferences("WatchSettings", MODE_PRIVATE)
+                    .getString("watchName", "SmartWatch");
+
+            // 4. Gửi email (chạy trên background thread bên trong EmailSender)
+            EmailSender.sendFallAlert(recipients, watchName, magnitude, (success, error) ->
+                    runOnUiThread(() -> {
+                        if (success) {
+                            Toast.makeText(this,
+                                    "✅ Đã gửi email cảnh báo tới người thân!",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(this,
+                                    "❌ Gửi email thất bại: " + error,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    })
+            );
+
+            // 5. Ghi vào lịch sử (để FallDetectionActivity hiển thị)
+            recordFallEventToHistory(magnitude, true);
+
+        } else {
+            // Người dùng ổn
+            updateFallStateFirebase("no", magnitude);
+            recordFallEventToHistory(magnitude, false);
+            Toast.makeText(this, "Đã ghi nhận — bạn ổn 👍", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // ── Firebase: ghi trạng thái té vào node "fall_state" ────────────────────
+    private void updateFallStateFirebase(String state, double magnitude) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("state",     state);
+        data.put("magnitude", magnitude);
+        data.put("timestamp", new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+                .format(new Date()));
+
+        fallStateRef.setValue(data)
+                .addOnSuccessListener(u -> Log.d(TAG, "✅ Firebase fall_state = " + state))
+                .addOnFailureListener(e -> Log.e(TAG, "❌ Firebase error: " + e.getMessage()));
+    }
+
+    // ── Ghi lịch sử vào SharedPreferences → FallDetectionActivity đọc ─────────
+    private void recordFallEventToHistory(double magnitude, boolean confirmed) {
+        SharedPreferences prefs = getSharedPreferences("WatchSettings", MODE_PRIVATE);
+        String json = prefs.getString("fallHistory", null);
+
+        Type type = new TypeToken<List<FallDetectionActivity.FallEvent>>() {}.getType();
+        List<FallDetectionActivity.FallEvent> history = new ArrayList<>();
+        if (json != null) {
+            List<FallDetectionActivity.FallEvent> saved = new Gson().fromJson(json, type);
+            if (saved != null) history = saved;
+        }
+
+        String dateTime = new SimpleDateFormat("dd/MM/yyyy - HH:mm", Locale.getDefault())
+                .format(new Date());
+        history.add(new FallDetectionActivity.FallEvent(
+                dateTime, magnitude,
+                confirmed ? FallDetectionActivity.FallEvent.STATUS_CONFIRMED
+                        : FallDetectionActivity.FallEvent.STATUS_CANCELLED));
+
+        prefs.edit()
+                .putString("fallHistory", new Gson().toJson(history))
+                .apply();
+    }
 }

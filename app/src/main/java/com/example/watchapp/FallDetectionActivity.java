@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class FallDetectionActivity extends BaseActivity {
+    private static final String TAG = "FallDetectionActivity";
 
     // ── Views ──────────────────────────────────────────────────────────────────
     private Button btnBack;

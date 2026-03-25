@@ -114,6 +114,7 @@ public class BLEService extends Service {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                // Yêu cầu MTU trước — notification sẽ được bật sau khi MTU OK
                 Log.d(TAG, "Requesting MTU=64...");
                 gatt.requestMtu(64);
             }
@@ -122,6 +123,7 @@ public class BLEService extends Service {
         @Override
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
             Log.d(TAG, "MTU changed to: " + mtu + " status=" + status);
+            // MTU đã được negotiate xong → bây giờ mới enable notify an toàn
             enableSensorDataNotifications();
         }
 
@@ -151,7 +153,7 @@ public class BLEService extends Service {
         Log.d(TAG, "Raw BLE data: " + raw);
 
         Intent intent = new Intent(action);
-        intent.putExtra(EXTRA_DATA, raw);
+        intent.putExtra(EXTRA_DATA, raw); // gửi raw string để Activity tự parse
 
         //  PARSE FORMAT MỚI: "B:0,S:0,F:0,AX:0.83,AY:-0.41,AZ:-0.52,M:10.33"
         int   bpm    = -1;

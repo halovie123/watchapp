@@ -76,6 +76,7 @@
     <string name="fall_statistics">Thống kê</string>
     <string name="fall_total">Tổng\nté ngã</string>
     <string name="fall_confirmed">Đã\nxác nhận</string>
+    <string name="fall_confirm">Đã xác nhận</string>
     <string name="fall_cancelled">Đã\nhủy</string>
 
     <string name="fall_history">Lịch sử té ngã</string>
@@ -94,18 +95,13 @@
 
 
     <!-- Advanced Settings -->
-    <string name="emergency_contacts">Email, SĐT Người Thân</string>
+    <string name="emergency_contacts">Email  Người Thân</string>
     <string name="emergency_contacts_desc">Thêm email, số điện thoại người thân để tự động gửi tin nhắn khi có báo động</string>
-    <string name="add_contact_hint">Thêm email/sđt (chú thích)</string>
+    <string name="add_contact_hint">Thêm email (chú thích)</string>
     <string name="add_person">+ Thêm người thân</string>
     <string name="contact_deleted">Đã xóa người thân</string>
+    <string name="save">Lưu</string>
 
-    <string name="check_cycle">Chu kỳ đo</string>
-    <string name="check_once_every">1 lần đo mỗi</string>
-    <string name="minute">Phút</string>
-    <string name="second">Giây</string>
-    <string name="ok">OK</string>
-    <string name="saved_check_cycle">Đã lưu chu kỳ đo: %1$d phút %2$d giây</string>
 
     <string name="language">Ngôn ngữ</string>
     <string name="vietnamese">Tiếng Việt</string>

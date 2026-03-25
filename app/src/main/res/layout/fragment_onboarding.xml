@@ -8,8 +8,8 @@
 
     <ImageView
         android:id="@+id/imageOnboarding"
-        android:layout_width="280dp"
-        android:layout_height="280dp"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
         android:layout_marginBottom="32dp"
         android:contentDescription="Watch Image"
         android:scaleType="centerCrop" />

@@ -42,7 +42,7 @@
                 android:id="@+id/tvFallMagnitude"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cường độ: 28.4 m/s²"
+                android:text="@string/fall_magnitude"
                 android:textSize="13sp"
                 android:textColor="#666666"
                 android:layout_marginTop="2dp" />
@@ -53,7 +53,7 @@
             android:id="@+id/tvFallStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Đã xác nhận"
+            android:text="@string/fall_confirm"
             android:textSize="12sp"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
