@@ -35,6 +35,9 @@ public class OxygenActivity extends BaseActivity {
     private DatabaseReference oxygenRef;
     private ValueEventListener oxygenListener;
     private DatabaseReference healthRecordsRef;
+    private int lastValidSpo2 = 0;
+    private String lastStatus = "";
+    private Runnable fingerLostRunnable;
 
 
     // ─── BLE Broadcast Receiver ──────────────────────────────
@@ -101,39 +104,68 @@ public class OxygenActivity extends BaseActivity {
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(bleReceiver);
     }
-
+    private void setStatus(String newStatus) {
+        if (!newStatus.equals(lastStatus)) {
+            tvStatus.setText(newStatus);
+            lastStatus = newStatus;
+        }
+    }
     // ─── Data handling ────────────────────────────────────────
     private void handleSensorData(Intent intent) {
         int spo2   = intent.getIntExtra(BLEService.EXTRA_SPO2,   -1);
         int finger = intent.getIntExtra(BLEService.EXTRA_FINGER, -1);
         int motion = intent.getIntExtra(BLEService.EXTRA_MOTION,  0);
 
+        // 👉 MẤT TAY (delay 500ms chống nháy)
         if (finger == 0) {
-            tvOxygenLevel.setText("--");
-            tvStatus.setText("Chưa đặt tay lên cảm biến");
+
+            if (fingerLostRunnable != null) {
+                handler.removeCallbacks(fingerLostRunnable);
+            }
+
+            fingerLostRunnable = () -> {
+                lastValidSpo2 = 0;
+                setStatus("Chưa đặt tay lên cảm biến");
+                tvOxygenLevel.setText("--");
+            };
+
+            handler.postDelayed(fingerLostRunnable, 500);
             return;
         }
+
+        // 👉 CÓ TAY LẠI → hủy reset
+        if (fingerLostRunnable != null) {
+            handler.removeCallbacks(fingerLostRunnable);
+        }
+
+        // 👉 CHƯA CÓ DỮ LIỆU
         if (spo2 <= 0) {
-            tvOxygenLevel.setText("--");
-            tvStatus.setText("Đang đo nồng độ oxy...");
+            if (lastValidSpo2 == 0) {
+                setStatus("Đang đo nồng độ oxy...");
+                tvOxygenLevel.setText("--");
+            } else {
+                tvOxygenLevel.setText(lastValidSpo2 + "%");
+            }
             return;
+        }
+
+        // 👉 DỮ LIỆU HỢP LỆ
+        lastValidSpo2 = spo2;
+
+        if (motion == 1) {
+            setStatus("Cảnh báo: đang chuyển động");
+        } else if (spo2 < 90) {
+            setStatus("Nồng độ oxy nguy hiểm!");
+        } else if (spo2 < 95) {
+            setStatus("Nồng độ oxy thấp");
+        } else {
+            setStatus("Nồng độ oxy bình thường");
         }
 
         tvOxygenLevel.setText(spo2 + "%");
 
-        if (motion == 1) {
-            tvStatus.setText("Cảnh báo: đang chuyển động");
-        } else if (spo2 < 90) {
-            tvStatus.setText("Nồng độ oxy nguy hiểm!");
-        } else if (spo2 < 95) {
-            tvStatus.setText("Nồng độ oxy thấp");
-        } else {
-            tvStatus.setText("Nồng độ oxy bình thường");
-        }
-
         dataManager.saveOxygenData(spo2);
         refreshChart();
-        pushToFirebase(spo2);
     }
 
     private void pushToFirebase(int spo2) {

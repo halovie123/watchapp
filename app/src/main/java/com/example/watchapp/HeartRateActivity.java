@@ -16,27 +16,30 @@ import com.google.firebase.database.*;
 
 import java.util.List;
 
+
 public class HeartRateActivity extends BaseActivity {
 
     private static final String TAG = "HeartRateActivity";
 
-    // ── UI ────────────────────────────────────────────────────────────────────
     private TextView tvHeartRate, tvStatus, tvAverage;
     private Button btnBack;
     private ChartView chartView;
     private HealthDataManager dataManager;
 
-    // ── Firebase ──────────────────────────────────────────────────────────────
+    // Firebase
     private DatabaseReference heartRateRef;
     private DatabaseReference healthRecordsRef;
-    private DatabaseReference fallStateRef;
+    private DatabaseReference fallStateRef;      // ✅ THÊM MỚI
 
-    // ── Fall state ────────────────────────────────────────────────────────────
     private String fallStatus = "no";
 
-    // =========================================================================
-    //  BLE RECEIVER
-    // =========================================================================
+
+    private int lastValidBpm = 0;
+    private String lastStatus = "";
+
+    // ===============================
+    // BLE RECEIVER
+    // ===============================
     private final BroadcastReceiver bleReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -57,17 +60,19 @@ public class HeartRateActivity extends BaseActivity {
         }
     };
 
-    // =========================================================================
-    //  FALL RECEIVER
-    // =========================================================================
+    // ===============================
+    // FALL RECEIVER
+    // ===============================
     private final BroadcastReceiver fallReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if ("com.example.watchapp.FALL_DETECTED".equals(intent.getAction())) {
+
                 double magnitude = intent.getDoubleExtra("magnitude", 0);
                 Log.d(TAG, "🚨 FALL DETECTED: " + magnitude);
 
                 fallStatus = "yes";
+
                 int bpm = getCurrentBPM();
 
                 // ✅ Gửi cả 2 node
@@ -82,9 +87,9 @@ public class HeartRateActivity extends BaseActivity {
         }
     };
 
-    // =========================================================================
-    //  LIFECYCLE
-    // =========================================================================
+    // ===============================
+    // LIFECYCLE
+    // ===============================
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -102,7 +107,7 @@ public class HeartRateActivity extends BaseActivity {
 
         heartRateRef     = FirebaseDatabase.getInstance().getReference("heart_rate");
         healthRecordsRef = FirebaseDatabase.getInstance().getReference("health_records");
-        fallStateRef     = FirebaseDatabase.getInstance().getReference("fall_state");
+        fallStateRef     = FirebaseDatabase.getInstance().getReference("fall_state"); // ✅
 
         startFirebaseListener();
         refreshChart();
@@ -111,15 +116,12 @@ public class HeartRateActivity extends BaseActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        // BLE
         IntentFilter filter = new IntentFilter();
         filter.addAction(BLEService.ACTION_GATT_CONNECTED);
         filter.addAction(BLEService.ACTION_GATT_DISCONNECTED);
         filter.addAction(BLEService.ACTION_DATA_AVAILABLE);
         LocalBroadcastManager.getInstance(this).registerReceiver(bleReceiver, filter);
 
-        // Fall
         IntentFilter fallFilter = new IntentFilter("com.example.watchapp.FALL_DETECTED");
         LocalBroadcastManager.getInstance(this).registerReceiver(fallReceiver, fallFilter);
     }
@@ -131,49 +133,54 @@ public class HeartRateActivity extends BaseActivity {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(fallReceiver);
     }
 
-    // =========================================================================
-    //  XỬ LÝ DỮ LIỆU BLE
-    // =========================================================================
+    // ===============================
+    // XỬ LÝ DỮ LIỆU BLE
+    // ===============================
+
+    private void setStatus(String newStatus) {
+        if (!newStatus.equals(lastStatus)) {
+            tvStatus.setText(newStatus);
+            lastStatus = newStatus;
+        }
+    }
     private void handleSensorData(Intent intent) {
         int bpm    = intent.getIntExtra(BLEService.EXTRA_BPM,    -1);
-        int spo2   = intent.getIntExtra(BLEService.EXTRA_SPO2,   -1);
         int finger = intent.getIntExtra(BLEService.EXTRA_FINGER, -1);
         int motion = intent.getIntExtra(BLEService.EXTRA_MOTION,  0);
 
-        if (spo2 > 0) dataManager.saveOxygenData(spo2);
-
-        // ❌ Chưa đặt tay → không gửi
+        // 👉 THẢ TAY
         if (finger == 0) {
+            lastValidBpm = 0;
+
+            setStatus("Chưa đặt tay lên cảm biến");
             tvHeartRate.setText("--");
-            tvStatus.setText("Chưa đặt tay lên cảm biến");
             return;
         }
 
-        // ❌ Đang đo → không gửi
         if (bpm <= 0) {
-            tvHeartRate.setText("--");
-            tvStatus.setText("Đang đo...");
+            if (lastValidBpm == 0) {
+                setStatus("Đang đo...");
+                tvHeartRate.setText("--");
+            } else {
+                tvHeartRate.setText(lastValidBpm + " BPM");
+                // ❌ KHÔNG update status nữa
+            }
             return;
         }
 
-        // ✅ Dữ liệu hợp lệ → gửi
+        lastValidBpm = bpm;
+
+        if (motion == 1)    setStatus("Đang chuyển động");
+        else if (bpm < 60)  setStatus("Nhịp tim thấp");
+        else if (bpm > 100) setStatus("Nhịp tim cao");
+        else                setStatus("Bình thường");
+
         tvHeartRate.setText(bpm + " BPM");
-
-        if (motion == 1)    tvStatus.setText("Đang chuyển động");
-        else if (bpm < 60)  tvStatus.setText("Nhịp tim thấp");
-        else if (bpm > 100) tvStatus.setText("Nhịp tim cao");
-        else                tvStatus.setText("Bình thường");
-
-        dataManager.saveHeartRateData(bpm);
-        refreshChart();
-
-        pushFallState(0, fallStatus);      // ✅ gửi fall_state
-        pushHealthRecord(bpm, fallStatus); // ✅ gửi health_records
     }
-
-    // =========================================================================
-    //  PUSH fall_state  →  {magnitude, state, timestamp}
-    // =========================================================================
+    // ===============================
+    // PUSH fall_state
+    // {magnitude, state, timestamp}
+    // ===============================
     private void pushFallState(double magnitude, String state) {
         String timestamp = new java.text.SimpleDateFormat(
                 "dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault())
@@ -184,15 +191,15 @@ public class HeartRateActivity extends BaseActivity {
         record.put("state",     state);
         record.put("timestamp", timestamp);
 
-        // setValue = ghi đè, khớp với cấu trúc MainActivity (1 node duy nhất)
-        fallStateRef.setValue(record)
+        fallStateRef.push().setValue(record)
                 .addOnSuccessListener(u -> Log.d(TAG, "✅ fall_state OK: " + state))
                 .addOnFailureListener(e -> Log.e(TAG, "❌ fall_state FAIL: " + e.getMessage()));
     }
 
-    // =========================================================================
-    //  PUSH health_records  →  {fall_detection, heart_rate, spo2, timestamp}
-    // =========================================================================
+    // ===============================
+    // PUSH health_records
+    // {fall_detection, heart_rate, spo2, timestamp}
+    // ===============================
     private void pushHealthRecord(int bpm, String fallDetection) {
         String timestamp = new java.text.SimpleDateFormat(
                 "dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault())
@@ -206,16 +213,14 @@ public class HeartRateActivity extends BaseActivity {
         record.put("spo2",           lastSpo2 > 0 ? lastSpo2 : 0);
         record.put("timestamp",      timestamp);
 
-        Log.d(TAG, "🔥 pushHealthRecord: bpm=" + bpm + " fall=" + fallDetection);
-
         healthRecordsRef.push().setValue(record)
                 .addOnSuccessListener(u -> Log.d(TAG, "✅ health_records OK: HR=" + bpm))
                 .addOnFailureListener(e -> Log.e(TAG, "❌ health_records FAIL: " + e.getMessage()));
     }
 
-    // =========================================================================
-    //  LẤY BPM HIỆN TẠI
-    // =========================================================================
+    // ===============================
+    // LẤY BPM HIỆN TẠI
+    // ===============================
     private int getCurrentBPM() {
         try {
             return Integer.parseInt(tvHeartRate.getText().toString().replace(" BPM", ""));
@@ -224,16 +229,16 @@ public class HeartRateActivity extends BaseActivity {
         }
     }
 
-    // =========================================================================
-    //  FIREBASE LISTENER (lắng nghe heart_rate node để hiển thị UI)
-    // =========================================================================
+    // ===============================
+    // FIREBASE LISTENER
+    // ===============================
     private void startFirebaseListener() {
         heartRateRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 Integer bpm = snapshot.child("value").getValue(Integer.class);
                 if (bpm == null) return;
-                tvHeartRate.setText(String.valueOf(bpm));
+//                tvHeartRate.setText(String.valueOf(bpm));
             }
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
@@ -242,9 +247,9 @@ public class HeartRateActivity extends BaseActivity {
         });
     }
 
-    // =========================================================================
-    //  CHART
-    // =========================================================================
+    // ===============================
+    // CHART
+    // ===============================
     private void refreshChart() {
         List<HealthDataManager.HealthDataPoint> data = dataManager.getHeartRateData();
         chartView.setData(data, 0xFFE53935, 40, 180);
