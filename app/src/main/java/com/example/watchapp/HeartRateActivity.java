@@ -241,6 +241,4 @@ public class HeartRateActivity extends BaseActivity implements SensorEventListen
             tvAverage.setText(R.string.no_data);
         }
     }
-
-
 }
