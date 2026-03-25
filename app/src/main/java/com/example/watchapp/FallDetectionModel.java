@@ -34,7 +34,7 @@ public class FallDetectionModel {
 
     // Model parameters
     private static final int WINDOW_SIZE = 512;
-    private static final float FALL_THRESHOLD = 0.5f; // Probability threshold
+    private static final float FALL_THRESHOLD = 0.8f; // Probability threshold
 
     private Interpreter tflite;
     private List<Float> dataBuffer;
@@ -158,6 +158,21 @@ public class FallDetectionModel {
 
         return String.format("Buffer: %d/%d | Min: %.2f | Max: %.2f | Avg: %.2f",
                 dataBuffer.size(), WINDOW_SIZE, min, max, avg);
+    }
+
+    public float calculateVariance() {
+        if (dataBuffer.size() < WINDOW_SIZE) return 0;
+
+        float mean = 0;
+        for (float v : dataBuffer) mean += v;
+        mean /= dataBuffer.size();
+
+        float var = 0;
+        for (float v : dataBuffer) {
+            float diff = v - mean;
+            var += diff * diff;
+        }
+        return var / dataBuffer.size();
     }
 
     /**
