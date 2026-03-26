@@ -13,6 +13,9 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * BLEService — nhận dữ liệu từ ESP32 SmartWatch (NimBLE 2.x)
@@ -54,6 +57,10 @@ public class BLEService extends Service {
     public static final UUID CHARACTERISTIC_COMMAND_UUID =
             UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a9");
 
+    /** Datetime write — phone gửi "YYYY-MM-DD HH:MM:SS" mỗi khi kết nối */
+    public static final UUID CHARACTERISTIC_DATETIME_UUID =
+            UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26ab");
+
     private static final UUID CLIENT_CHARACTERISTIC_CONFIG =
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
@@ -72,6 +79,8 @@ public class BLEService extends Service {
     public static final String EXTRA_MOTION           = "com.example.watchapp.EXTRA_MOTION";
     public static final String EXTRA_MAG              = "com.example.watchapp.EXTRA_MAG";       // m/s²
     public static final String EXTRA_FALL_PROBABILITY = "com.example.watchapp.EXTRA_FALL_PROBABILITY";
+    /** FALL flag từ ESP32 hardware (1 = ESP phát hiện ngã, 0 = bình thường) */
+    public static final String EXTRA_FALL_ESP         = "com.example.watchapp.EXTRA_FALL_ESP";
 
     // ── Fall detection constants ───────────────────────────────────────────────
     /**
@@ -107,9 +116,8 @@ public class BLEService extends Service {
 
     // ── Fall detection state ──────────────────────────────────────────────────
     private FallDetectionModel fallDetectionModel;
-    private long lastFallAlertTime = 0;
-    private static final long FALL_ALERT_COOLDOWN = 5000; // 5 giây giữa các lần cảnh báo
-    private int inferenceCounter = 0; // Đếm số lần inference (để log thưa hơn)
+    private long lastFallAlertTime  = 0;
+    private int  inferenceCounter   = 0;
 
     /**
      * Cache: gia tốc cuối nhận được, đơn vị m/s².
@@ -129,7 +137,6 @@ public class BLEService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        // Khởi tạo fall detection model
         fallDetectionModel = new FallDetectionModel(this);
         if (!fallDetectionModel.isModelReady()) {
             Log.e(TAG, "Fall detection model failed to load — chỉ dùng rule-based spike");
@@ -206,7 +213,9 @@ public class BLEService extends Service {
                 Log.d(TAG, "✓ MPU notify enabled → enabling Health notify");
                 enableHealthNotifications();
             } else if (CHARACTERISTIC_HEALTH_UUID.equals(charUuid)) {
-                Log.d(TAG, "✓ Health notify enabled — BLE fully ready");
+                Log.d(TAG, "✓ Health notify enabled → sending datetime to ESP32");
+                // Gửi datetime ngay sau khi tất cả notify đã được bật
+                sendDatetimeToEsp();
             }
         }
 
@@ -404,6 +413,9 @@ public class BLEService extends Service {
                 "🚨 FALL DETECTED [%s] P=%.3f accel=%.1f m/s²",
                 detectionType, probability, lastAccelMs2));
 
+        // ── Gửi FALL:YES về ESP32 để hiển thị trên OLED ──────────────────
+        sendFallToEsp(true);
+
         // Broadcast fall event
         Intent fallIntent = new Intent(ACTION_FALL_DETECTED);
         fallIntent.putExtra("magnitude",    (double) lastAccelMs2);
@@ -420,6 +432,10 @@ public class BLEService extends Service {
     }
 
 
+    //  Parser 2 — Health packet "B:75,S:98,F:1"
+    //
+    //  Format gửi từ taskMAX30102 (ESP32), mỗi ~1 s:
+    //    B:<bpm>, S:<spo2>, F:<0|1>
 
     private void parseHealthData(String raw) {
         Log.d(TAG, "[Health] " + raw);
@@ -430,23 +446,23 @@ public class BLEService extends Service {
         int bpm    = -1;
         int spo2   = -1;
         int finger = -1;
+        int fallEsp = 0;  // FALL flag từ ESP32 hardware (0 = OK, 1 = ngã)
 
         try {
             for (String part : raw.split(",")) {
                 part = part.trim();
-                if      (part.startsWith("B:")) bpm    = Integer.parseInt(part.substring(2));
-                else if (part.startsWith("S:")) spo2   = Integer.parseInt(part.substring(2));
-                else if (part.startsWith("F:")) finger = Integer.parseInt(part.substring(2));
+                if      (part.startsWith("B:"))    bpm     = Integer.parseInt(part.substring(2));
+                else if (part.startsWith("S:"))    spo2    = Integer.parseInt(part.substring(2));
+                else if (part.startsWith("F:"))    finger  = Integer.parseInt(part.substring(2));
+                else if (part.startsWith("FALL:")) fallEsp = Integer.parseInt(part.substring(5));
             }
-
         } catch (Exception e) {
             Log.e(TAG, "Health parse error: " + e.getMessage() + " | raw='" + raw + "'");
         }
 
         Log.d(TAG, String.format(java.util.Locale.US,
-                "[Health] BPM=%d SpO2=%d Finger=%d", bpm, spo2, finger));
+                "[Health] BPM=%d SpO2=%d Finger=%d FallESP=%d", bpm, spo2, finger, fallEsp));
 
-        // ── Lưu và đính Extra ─────────────────────────────────────────────
         if (bpm > 0 && bpm <= 220) {
             intent.putExtra(EXTRA_BPM, bpm);
             HealthDataManager.getInstance(this).saveHeartRateData(bpm);
@@ -457,6 +473,24 @@ public class BLEService extends Service {
         }
         if (finger >= 0) intent.putExtra(EXTRA_FINGER, finger);
 
+        // Truyền FALL flag của ESP32 về UI
+        intent.putExtra(EXTRA_FALL_ESP, fallEsp);
+
+        // Nếu ESP32 phát hiện ngã và chưa trong cooldown → broadcast riêng
+        if (fallEsp == 1) {
+            long now = System.currentTimeMillis();
+            if (now - lastFallAlertTime >= FALL_ALERT_COOLDOWN_MS) {
+                lastFallAlertTime = now;
+                Log.w(TAG, "[Health] 🚨 FALL reported by ESP32 hardware");
+                Intent fallIntent = new Intent(ACTION_FALL_DETECTED);
+                fallIntent.putExtra("magnitude",     (double) lastAccelMs2);
+                fallIntent.putExtra("probability",   1.0f);
+                fallIntent.putExtra("detectionType", "ESP32_HW");
+                LocalBroadcastManager.getInstance(this).sendBroadcast(fallIntent);
+                FallNotificationHelper.showFallNotification(this, lastAccelMs2);
+            }
+        }
+
         // Gắn kèm accel hiện tại (lấy từ cache MPU)
         intent.putExtra(EXTRA_MAG, lastAccelMs2);
         intent.putExtra(EXTRA_MOTION, lastAccelMs2 >= SPIKE_LOW_MS2 ? 1 : 0);
@@ -464,6 +498,43 @@ public class BLEService extends Service {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
+
+    //  Datetime sync — gửi giờ điện thoại cho ESP32
+
+
+    /**
+     * Gửi ngày giờ hiện tại của điện thoại lên ESP32 qua CHARACTERISTIC_DATETIME_UUID.
+     * Format: "YYYY-MM-DD HH:MM:SS"  (19 bytes ASCII, khớp với DatetimeCallbacks trên ESP32)
+     *
+     * Gọi tự động sau khi Health notify được enable (kết nối xong).
+     * Cũng có thể gọi thủ công từ Activity khi muốn resync.
+     */
+    public void sendDatetimeToEsp() {
+        if (!hasPermission() || bluetoothGatt == null) {
+            Log.w(TAG, "[Datetime] Không gửi được — chưa kết nối hoặc thiếu permission");
+            return;
+        }
+
+        BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
+        if (service == null) {
+            Log.e(TAG, "[Datetime] Service không tìm thấy");
+            return;
+        }
+
+        BluetoothGattCharacteristic ch = service.getCharacteristic(CHARACTERISTIC_DATETIME_UUID);
+        if (ch == null) {
+            Log.e(TAG, "[Datetime] Characteristic không tìm thấy (" + CHARACTERISTIC_DATETIME_UUID + ")");
+            return;
+        }
+
+        // Lấy thời gian điện thoại, format "YYYY-MM-DD HH:MM:SS"
+        String datetime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+                .format(new Date());
+
+        ch.setValue(datetime.getBytes());
+        boolean ok = bluetoothGatt.writeCharacteristic(ch);
+        Log.i(TAG, "[Datetime] Gửi \"" + datetime + "\" → " + (ok ? "OK" : "FAIL"));
+    }
 
     //  BLE notification helpers
 
@@ -544,8 +615,6 @@ public class BLEService extends Service {
         if (bluetoothGatt != null) { bluetoothGatt.close(); bluetoothGatt = null; }
     }
 
-    
-
     public void sendCommand(byte[] command) {
         if (!hasPermission() || bluetoothGatt == null) return;
         BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
@@ -559,6 +628,41 @@ public class BLEService extends Service {
     // ── Helpers ───────────────────────────────────────────────────────────────
     private void broadcastSimple(String action) {
         LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(action));
+    }
+
+    // ── Fall → ESP32 ──────────────────────────────────────────────────────────
+
+    /**
+     * Gửi kết quả fall detection từ TFLite về ESP32 qua CHARACTERISTIC_COMMAND_UUID.
+     * ESP32 CommandCallbacks nhận "FALL:YES" / "FALL:NO" → cập nhật g_fallDetected
+     * → hiển thị trên OLED.
+     *
+     * Gọi nội bộ từ runFallInference() — không cần gọi từ bên ngoài.
+     *
+     * @param isFall true = phát hiện té ngã, false = bình thường
+     */
+    private void sendFallToEsp(boolean isFall) {
+        if (!hasPermission() || bluetoothGatt == null) {
+            Log.w(TAG, "[sendFallToEsp] Không gửi được — chưa kết nối hoặc thiếu permission");
+            return;
+        }
+
+        BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
+        if (service == null) {
+            Log.e(TAG, "[sendFallToEsp] Service không tìm thấy");
+            return;
+        }
+
+        BluetoothGattCharacteristic ch = service.getCharacteristic(CHARACTERISTIC_COMMAND_UUID);
+        if (ch == null) {
+            Log.e(TAG, "[sendFallToEsp] Command characteristic không tìm thấy");
+            return;
+        }
+
+        String command = isFall ? "FALL:YES" : "FALL:NO";
+        ch.setValue(command.getBytes());
+        boolean ok = bluetoothGatt.writeCharacteristic(ch);
+        Log.i(TAG, "[sendFallToEsp] Gửi \"" + command + "\" → " + (ok ? "OK" : "FAIL"));
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
