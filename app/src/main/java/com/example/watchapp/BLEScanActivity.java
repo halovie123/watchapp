@@ -94,6 +94,7 @@ public class BLEScanActivity extends AppCompatActivity {
         btnScan.setOnClickListener(v -> {
             if (!scanning) {
                 deviceList.clear();
+                scanResultMap.clear();
                 deviceAdapter.notifyDataSetChanged();
                 startScan();
             } else {
@@ -265,6 +266,7 @@ public class BLEScanActivity extends AppCompatActivity {
             }
 
             // Thêm vào danh sách và cập nhật UI
+            scanResultMap.put(deviceAddress, result);
             deviceList.add(device);
             runOnUiThread(() -> {
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
@@ -301,6 +303,16 @@ public class BLEScanActivity extends AppCompatActivity {
         String deviceName = device.getName();
         String deviceAddress = device.getAddress();
 
+        // ── CHECK UUID: xác thực thiết bị trước khi kết nối ─────────────────
+        if (!hasTargetServiceUuid(deviceAddress)) {
+            Log.w(TAG, "UUID không khớp: " + deviceAddress);
+            Toast.makeText(this,
+                    "Không thể kết nối\n\"" + (deviceName != null ? deviceName : deviceAddress)
+                            + "\" không phải thiết bị WatchApp",
+                    Toast.LENGTH_LONG).show();
+            return; // Dừng, không connect
+        }
+
         Log.d(TAG, "Connecting to device: " + deviceAddress);
         Toast.makeText(this, "Đang kết nối với " +
                 (deviceName != null ? deviceName : deviceAddress), Toast.LENGTH_SHORT).show();
@@ -334,6 +346,34 @@ public class BLEScanActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, "BLE Service chưa sẵn sàng", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Helper: kiểm tra UUID trong advertisement packet của ScanResult
+    // ────────────────────────────────────────────────────────────────────────
+    private boolean hasTargetServiceUuid(String deviceAddress) {
+        ScanResult result = scanResultMap.get(deviceAddress);
+        if (result == null) {
+            Log.w(TAG, "Không tìm thấy ScanResult cho: " + deviceAddress);
+            return false;
+        }
+
+        ScanRecord record = result.getScanRecord();
+        if (record == null) {
+            Log.w(TAG, "ScanRecord null cho: " + deviceAddress);
+            return false;
+        }
+
+        List<ParcelUuid> serviceUuids = record.getServiceUuids();
+        Log.d(TAG, "UUID của " + deviceAddress + ": " + serviceUuids);
+        Log.d(TAG, "Target UUID: " + TARGET_SERVICE_UUID);
+
+        if (serviceUuids == null || serviceUuids.isEmpty()) {
+            Log.w(TAG, "Device không quảng bá Service UUID: " + deviceAddress);
+            return false;
+        }
+
+        return serviceUuids.contains(TARGET_SERVICE_UUID);
     }
 
     // Service Connection
