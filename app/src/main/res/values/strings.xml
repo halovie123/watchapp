@@ -8,7 +8,7 @@
     <string name="onboarding_desc">Khám phá thiết kế và công nghệ của đồng hồ theo dõi sức khỏe thông minh.</string>
     <string name="onboarding_title1">Theo dõi sức khỏe</string>
     <string name="onboarding_desc1">Giám sát nhịp tim và lượng oxy trong máu của bạn theo thời gian thực.</string>
-    <string name="onboarding_title2">Luôn đảm báo an toàn</string>
+    <string name="onboarding_title2">Luôn đảm bảo an toàn</string>
     <string name="onboarding_desc2">Cảnh báo té ngã để luôn bảo vệ bạn.</string>
 
     <!-- BLE Screen-->
@@ -165,7 +165,7 @@
         <item>💪 Vận động nhẹ nhàng mỗi ngày giúp tăng cường sức khỏe tim mạch.</item>
     </string-array>
 
-    <string name="bot_functions">Tôi có thể giúp bạn:\n💓 Theo dõi và phân tích nhịp tim\n🫁 Theo dõi nồng độ oxy (SpO2)\n🚨 Cảnh báo té ngã\n💡 Cung cấp mẹo sức khỏe\n📊 Phân tích dữ liệu sức khỏe của bạn\n😴 Tư vấn về giấc ngủ\nBạn có thể hỏi tôi bất cứ điều gì về sức khỏe!</string>
+    <string name="bot_functions">🧠 AI đang phân tích dữ liệu...</string>
 
     <string name="bot_greeting">Xin chào! Rất vui được gặp bạn.\nTôi là trợ lý sức khỏe thông minh.\nBạn cần tôi giúp gì về sức khỏe của bạn không? 😊</string>
 

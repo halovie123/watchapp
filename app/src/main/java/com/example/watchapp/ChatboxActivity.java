@@ -201,10 +201,11 @@ public class ChatboxActivity extends BaseActivity {
         }
 
         // 2. Build prompt
-        String prompt = "Bạn là trợ lý sức khỏe thông minh tích hợp trong smartwatch. "
-                + "Phân tích dữ liệu sức khỏe sau và trả lời câu hỏi bằng tiếng Việt, "
-                + "ngắn gọn (tối đa 4 câu), thân thiện và dễ hiểu.\n\n"
-                + healthContext + "\nCâu hỏi: " + userMessage;
+        String prompt = "You are a smart health assistant integrated in a smartwatch. "
+                + "Analyze the health data and answer the user's question. "
+                + "Reply in the SAME language as the user. "
+                + "Keep it short, friendly, and easy to understand (max 4 sentences).\n\n"
+                + healthContext + "\nQuestion: " + userMessage;
 
         // 3. Gọi Gemini trên background thread
         new Thread(() -> {
@@ -292,7 +293,7 @@ public class ChatboxActivity extends BaseActivity {
         View v = LayoutInflater.from(this)
                 .inflate(R.layout.item_chat_bot, chatContainer, false);
         ((TextView) v.findViewById(R.id.tvBotMessage))
-                .setText("🧠 AI đang phân tích dữ liệu...");
+                .setText(getString(R.string.bot_functions));
         ((TextView) v.findViewById(R.id.tvBotTime)).setText(getCurrentTime());
         chatContainer.addView(v);
         scrollToBottom();
@@ -419,7 +420,6 @@ public class ChatboxActivity extends BaseActivity {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN");
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         speechRecognizer.startListening(intent);
     }

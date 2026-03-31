@@ -165,7 +165,7 @@
         <item>💪 Do light exercise daily to improve cardiovascular health.</item>
     </string-array>
 
-    <string name="bot_functions">I can help you with:\n💓 Tracking and analyzing heart rate\n🫁 Monitoring oxygen levels (SpO₂)\n🚨 Fall detection alerts\n💡 Providing health tips\n📊 Analyzing your health data\n😴 Sleep advice\nYou can ask me anything about your health!</string>
+    <string name="bot_functions">🧠 AI is analyzing data...</string>
 
     <string name="bot_greeting">Hello! Nice to meet you.\nI am your smart health assistant.\nHow can I help you with your health today? 😊</string>
 
