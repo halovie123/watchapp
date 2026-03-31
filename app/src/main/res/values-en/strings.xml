@@ -17,8 +17,7 @@
     <string name="back">BACK</string>
     <string name="stop_scan">Stop scan</string>
     <string name="scanning_ble_devices">Scanning BLE devices...</string>
-    <string name="found">Found</string>
-    <string name="devices">devices</string>
+    <string name="found_devices">Finding %1$d devices</string>
 
     <!-- Main Screen -->
     <string name="smart_watch">SMART WATCH</string>
@@ -37,15 +36,12 @@
 
     <!-- Heart Rate -->
     <string name="measure_heart_rate">Measure Heart Rate</string>
-    <string name="start_measuring">Start Measuring</string>
-    <string name="stop_measuring">Stop Measuring</string>
+    <string name="status_moving">Moving</string>
     <string name="measuring_heart_rate">Measuring heart rate...</string>
-    <string name="press_to_measure">Press button to measure heart rate</string>
     <string name="heart_rate_low">Heart rate low</string>
     <string name="heart_rate_high">Heart rate high</string>
     <string name="heart_rate_normal">Heart rate normal</string>
     <string name="heart_rate_waiting">Place wrist on sensor…</string>
-    <string name="heart_rate_motion_warning">Motion detected — data may be inaccurate</string>
     <string name="ble_connected">Watch connected</string>
     <string name="ble_disconnected">Watch not connected</string>
     <string name="data_parse_error">Sensor data error</string>
@@ -55,12 +51,43 @@
     <!-- Oxygen -->
     <string name="measure_oxygen">Measure Oxygen Level</string>
     <string name="measuring_oxygen">Measuring oxygen level...</string>
-    <string name="press_to_measure_spo2">Press button to measure SpO2</string>
+    <string name="oxygen_dangerous">Dangerous oxygen level</string>
     <string name="oxygen_low">Oxygen level low</string>
     <string name="oxygen_normal">Oxygen level normal</string>
     <string name="oxygen_waiting">Place wrist on sensor…</string>
     <string name="oxygen_critical">SpO₂ critical — below 90%%</string>
     <string name="oxygen_motion_warning">Motion detected — data may be inaccurate</string>
+
+    <!-- Fall Detection -->
+    <string name="fall_detection_title">Fall Detection</string>
+    <string name="fall_detection_desc">Automatically detects and alerts when there is a risk of falling</string>
+    <string name="fall_detection_switch_label">Enable feature</string>
+    <string name="fall_detection_status_label">Status:</string>
+    <string name="fall_detection_active">● Active</string>
+    <string name="fall_detection_inactive">● Inactive</string>
+    <string name="fall_detection_turned_on">Fall detection enabled</string>
+    <string name="fall_detection_turned_off">Fall detection disabled</string>
+
+    <string name="fall_statistics">Statistcs</string>
+    <string name="fall_total">Total\nFalls</string>
+    <string name="fall_confirmed">Comfirmed</string>
+    <string name="fall_confirm">Comfirmed</string>
+    <string name="fall_cancelled">Canclled</string>
+
+    <string name="fall_history">Fall History</string>
+    <string name="fall_no_history">No fall events yet\nYou are safe!</string>
+    <string name="fall_magnitude">Magnitude: %.1f m/s²</string>
+    <string name="fall_clear_history">Clear history</string>
+    <string name="fall_clear_history_confirm">Are you sure you want to delete all fall history?</string>
+    <string name="fall_history_cleared">History cleared</string>
+    <string name="fall_status_confirmed">Comfirmed</string>
+    <string name="fall_status_cancelled">Cancelled</string>
+
+    <!-- Dùng chung (thêm nếu chưa có) -->
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
+
+
 
     <!-- Advanced Settings -->
     <string name="emergency_contacts">Emergency Contacts</string>
@@ -68,13 +95,8 @@
     <string name="add_contact_hint">Add email/phone (note)</string>
     <string name="add_person">+ Add Contact</string>
     <string name="contact_deleted">Contact deleted</string>
+    <string name="save">Save</string>
 
-    <string name="check_cycle">Check Cycle</string>
-    <string name="check_once_every">Check once every</string>
-    <string name="minute">Minute</string>
-    <string name="second">Second</string>
-    <string name="ok">OK</string>
-    <string name="saved_check_cycle">Saved check cycle: %1$d min %2$d sec</string>
 
     <string name="language">Language</string>
     <string name="vietnamese">Vietnamese</string>
@@ -162,7 +184,6 @@
 
     <!-- Toast Messages -->
     <string name="fall_detected">Fall detected! Are you okay?</string>
-    <string name="fall_detection_active">Fall detection is active</string>
     <string name="display_settings">Display settings</string>
 
 </resources>

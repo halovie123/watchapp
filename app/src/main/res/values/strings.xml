@@ -17,8 +17,7 @@
     <string name="back">QUAY LẠI</string>
     <string name="stop_scan">Dừng quét</string>
     <string name="scanning_ble_devices">Đang quét thiết bị BLE...</string>
-    <string name="found">Tìm thấy</string>
-    <string name="devices">thiết bị</string>
+    <string name="found_devices">Tìm thấy %1$d thiết bị</string>
 
     <!-- Main Screen -->
     <string name="smart_watch">Đồng hồ thông minh</string>
@@ -37,17 +36,14 @@
 
     <!-- Heart Rate -->
     <string name="measure_heart_rate">Đo nhịp tim</string>
-    <string name="start_measuring">Bắt đầu đo</string>
-    <string name="stop_measuring">Dừng đo</string>
+    <string name="status_moving">Đang chuyển động</string>
     <string name="measuring_heart_rate">Đang đo nhịp tim...</string>
-    <string name="press_to_measure">Nhấn nút để đo nhịp tim</string>
     <string name="heart_rate_low">Nhịp tim thấp</string>
     <string name="heart_rate_high">Nhịp tim cao</string>
-    <string name="heart_rate_normal">Nhịp tim bình thường</string>
-    <string name="heart_rate_waiting">Đặt cổ tay vào cảm biến…</string>
-    <string name="heart_rate_motion_warning">Phát hiện chuyển động — dữ liệu có thể không chính xác</string>
-    <string name="ble_connected">Đồng hồ đã kết nối</string>
-    <string name="ble_disconnected">Chưa kết nối đồng hồ</string>
+    <string name="heart_rate_normal">Bình thường</string>
+    <string name="heart_rate_waiting">Chưa đặt tay lên cảm biến..</string>
+    <string name="ble_connected">Đã kết nối</string>
+    <string name="ble_disconnected">Mất kết nối</string>
     <string name="data_parse_error">Lỗi đọc dữ liệu cảm biến</string>
     <string name="history_24h">Lịch sử 24 giờ</string>
     <string name="average_value">Trung bình: %d</string>
@@ -55,7 +51,7 @@
     <!-- Oxygen -->
     <string name="measure_oxygen">Đo nồng độ oxy</string>
     <string name="measuring_oxygen">Đang đo nồng độ oxy...</string>
-    <string name="press_to_measure_spo2">Nhấn nút để đo SpO2</string>
+    <string name="oxygen_dangerous">Nồng độ oxy nguy hiểm</string>
     <string name="oxygen_low">Nồng độ oxy thấp</string>
     <string name="oxygen_normal">Nồng độ oxy bình thường</string>
     <string name="oxygen_waiting">Đặt cổ tay vào cảm biến…</string>
@@ -63,8 +59,7 @@
     <string name="oxygen_motion_warning">Phát hiện chuyển động — dữ liệu có thể không chính xác</string>
 
     <!-- Fall Detection -->
-    <string name="fall_detection_title">Phát hiện té ngã</string>
-    <string name="fall_detection_enable">Phát hiện té ngã</string>
+    <string name="fall_detection_title">Cảnh báo vấp ngã</string>
     <string name="fall_detection_desc">Tự động phát hiện và cảnh báo khi có nguy cơ té ngã</string>
     <string name="fall_detection_switch_label">Bật tính năng</string>
     <string name="fall_detection_status_label">Trạng thái:</string>

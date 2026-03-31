@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BLEScanActivity extends AppCompatActivity {
+public class BLEScanActivity extends BaseActivity {
     private static final String TAG = "BLEScanActivity";
     private static final int PERMISSION_REQUEST_CODE = 101;
     private static final long SCAN_PERIOD = 10000; // 10 giây
@@ -198,9 +198,9 @@ public class BLEScanActivity extends AppCompatActivity {
         }
 
         scanning = true;
-        btnScan.setText("Dừng quét");
+        btnScan.setText(R.string.stop_scan);
         progressBar.setVisibility(View.VISIBLE);
-        tvStatus.setText("Đang quét thiết bị BLE...");
+        tvStatus.setText(R.string.scanning_ble_devices);
 
         // Scan bình thường, KHÔNG filter UUID — hiển thị tất cả thiết bị có tên
         bleScanner.startScan(scanCallback);
@@ -222,10 +222,9 @@ public class BLEScanActivity extends AppCompatActivity {
         }
 
         scanning = false;
-        btnScan.setText("Quét thiết bị");
+        btnScan.setText(R.string.scan_devices);
         progressBar.setVisibility(View.GONE);
-        tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
-
+        tvStatus.setText(getString(R.string.found_devices, deviceList.size()));
         Log.d(TAG, "Stopped BLE scan");
     }
 
@@ -270,7 +269,7 @@ public class BLEScanActivity extends AppCompatActivity {
             deviceList.add(device);
             runOnUiThread(() -> {
                 deviceAdapter.notifyItemInserted(deviceList.size() - 1);
-                tvStatus.setText("Tìm thấy " + deviceList.size() + " thiết bị");
+                tvStatus.setText(getString(R.string.found_devices, deviceList.size()));
             });
             Log.d(TAG, "Added: " + deviceName + " (" + deviceAddress + ")");
         }
@@ -307,7 +306,7 @@ public class BLEScanActivity extends AppCompatActivity {
         if (!hasTargetServiceUuid(deviceAddress)) {
             Log.w(TAG, "UUID không khớp: " + deviceAddress);
             Toast.makeText(this,
-                    "Không thể kết nối\n\"" + (deviceName != null ? deviceName : deviceAddress)
+                    "❌ Không thể kết nối\n\"" + (deviceName != null ? deviceName : deviceAddress)
                             + "\" không phải thiết bị WatchApp",
                     Toast.LENGTH_LONG).show();
             return; // Dừng, không connect

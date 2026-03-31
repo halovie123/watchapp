@@ -36,10 +36,10 @@ public class OxygenActivity extends BaseActivity {
             if (action == null) return;
             switch (action) {
                 case BLEService.ACTION_GATT_CONNECTED:
-                    tvStatus.setText("Đã kết nối BLE");
+                    tvStatus.setText(R.string.ble_connected);
                     break;
                 case BLEService.ACTION_GATT_DISCONNECTED:
-                    tvStatus.setText("Mất kết nối BLE");
+                    tvStatus.setText(R.string.ble_disconnected);
                     tvOxygenLevel.setText("--");
                     break;
                 case BLEService.ACTION_DATA_AVAILABLE:
@@ -109,7 +109,7 @@ public class OxygenActivity extends BaseActivity {
             }
             fingerLostRunnable = () -> {
                 lastValidSpo2 = 0;
-                setStatus("Chưa đặt tay lên cảm biến");
+                setStatus(getString(R.string.heart_rate_waiting));
                 tvOxygenLevel.setText("--");
                 refreshChart();
             };
@@ -125,11 +125,11 @@ public class OxygenActivity extends BaseActivity {
         // 👉 CHƯA ĐO ĐƯỢC
         if (spo2 <= 0) {
             if (lastValidSpo2 == 0) {
-                setStatus("Đang đo nồng độ oxy...");
+                setStatus(getString(R.string.measuring_oxygen));
                 tvOxygenLevel.setText("--");
             } else {
                 tvOxygenLevel.setText(lastValidSpo2 + "%");
-                refreshChart(); // ✅ fix: cập nhật tvCurrentSpo2
+                refreshChart();
             }
             return;
         }
@@ -137,10 +137,10 @@ public class OxygenActivity extends BaseActivity {
         // 👉 DỮ LIỆU HỢP LỆ
         lastValidSpo2 = spo2;
 
-        if (motion == 1)    setStatus("Cảnh báo: đang chuyển động");
-        else if (spo2 < 60) setStatus("Nồng độ oxy nguy hiểm!");
-        else if (spo2 < 80) setStatus("Nồng độ oxy thấp");
-        else                setStatus("Nồng độ oxy bình thường");
+        if (motion == 1)    setStatus(getString(R.string.status_moving));
+        else if (spo2 < 60) setStatus(getString(R.string.oxygen_dangerous));
+        else if (spo2 < 80) setStatus(getString(R.string.oxygen_low));
+        else                setStatus(getString(R.string.oxygen_normal));
 
         tvOxygenLevel.setText(spo2 + "%");
 

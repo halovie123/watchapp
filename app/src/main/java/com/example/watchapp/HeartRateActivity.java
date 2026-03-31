@@ -44,10 +44,10 @@ public class HeartRateActivity extends BaseActivity {
             if (action == null) return;
             switch (action) {
                 case BLEService.ACTION_GATT_CONNECTED:
-                    tvStatus.setText("Đã kết nối BLE");
+                    tvStatus.setText(R.string.ble_connected);
                     break;
                 case BLEService.ACTION_GATT_DISCONNECTED:
-                    tvStatus.setText("Mất kết nối BLE");
+                    tvStatus.setText(R.string.ble_disconnected);
                     tvHeartRate.setText("--");
                     break;
                 case BLEService.ACTION_DATA_AVAILABLE:
@@ -65,7 +65,7 @@ public class HeartRateActivity extends BaseActivity {
         public void onReceive(Context context, Intent intent) {
             if ("com.example.watchapp.FALL_DETECTED".equals(intent.getAction())) {
                 double magnitude = intent.getDoubleExtra("magnitude", 0);
-                Log.d(TAG, "🚨 FALL DETECTED: " + magnitude);
+                Log.d(TAG, "FALL DETECTED: " + magnitude);
 
                 fallStatus = "yes";
                 int bpm = getCurrentBPM();
@@ -142,7 +142,7 @@ public class HeartRateActivity extends BaseActivity {
         // 👉 THẢ TAY
         if (finger == 0) {
             lastValidBpm = 0;
-            setStatus("Chưa đặt tay lên cảm biến");
+            setStatus(getString(R.string.heart_rate_waiting));
             tvHeartRate.setText("--");
             refreshChart();
             return;
@@ -151,11 +151,11 @@ public class HeartRateActivity extends BaseActivity {
         // 👉 CHƯA ĐO ĐƯỢC
         if (bpm <= 0) {
             if (lastValidBpm == 0) {
-                setStatus("Đang đo...");
+                setStatus(getString(R.string.measuring_heart_rate));
                 tvHeartRate.setText("--");
             } else {
                 tvHeartRate.setText(lastValidBpm + " BPM");
-                refreshChart(); // ✅ fix: cập nhật tvCurrentBpm
+                refreshChart(); //
             }
             return;
         }
@@ -163,10 +163,10 @@ public class HeartRateActivity extends BaseActivity {
         // 👉 DỮ LIỆU HỢP LỆ
         lastValidBpm = bpm;
 
-        if (motion == 1)    setStatus("Đang chuyển động");
-        else if (bpm < 60)  setStatus("Nhịp tim thấp");
-        else if (bpm > 100) setStatus("Nhịp tim cao");
-        else                setStatus("Bình thường");
+        if (motion == 1)    setStatus(getString(R.string.status_moving));
+        else if (bpm < 60)  setStatus(getString(R.string.heart_rate_low));
+        else if (bpm > 100) setStatus(getString(R.string.heart_rate_high));
+        else                setStatus(getString(R.string.heart_rate_normal));
 
         tvHeartRate.setText(bpm + " BPM");
 
@@ -188,8 +188,8 @@ public class HeartRateActivity extends BaseActivity {
         record.put("timestamp", timestamp);
 
         fallStateRef.push().setValue(record)
-                .addOnSuccessListener(u -> Log.d(TAG, "✅ fall_state OK: " + state))
-                .addOnFailureListener(e -> Log.e(TAG, "❌ fall_state FAIL: " + e.getMessage()));
+                .addOnSuccessListener(u -> Log.d(TAG, "Fall_state OK: " + state))
+                .addOnFailureListener(e -> Log.e(TAG, "Fall_state FAIL: " + e.getMessage()));
     }
 
     // ===============================
@@ -209,8 +209,8 @@ public class HeartRateActivity extends BaseActivity {
         record.put("timestamp",      timestamp);
 
         healthRecordsRef.push().setValue(record)
-                .addOnSuccessListener(u -> Log.d(TAG, "✅ health_records OK: HR=" + bpm))
-                .addOnFailureListener(e -> Log.e(TAG, "❌ health_records FAIL: " + e.getMessage()));
+                .addOnSuccessListener(u -> Log.d(TAG, "health_records OK: HR=" + bpm))
+                .addOnFailureListener(e -> Log.e(TAG, "health_records FAIL: " + e.getMessage()));
     }
 
     // ===============================
