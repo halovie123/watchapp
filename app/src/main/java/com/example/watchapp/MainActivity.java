@@ -88,6 +88,13 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private AlertDialog fallAlertDialog;
     private CountDownTimer fallCountDownTimer;
 
+    // ── Pending fall: lưu magnitude khi detect lúc activity không ở foreground
+    // -1 = không có fall đang chờ
+    private double pendingFallMagnitude = -1;
+
+    // ── Cờ theo dõi activity có đang visible không ────────────────────────────
+    private boolean isActivityVisible = false;
+
     // =========================================================================
     //  LIFECYCLE
     // =========================================================================
@@ -121,17 +128,31 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     @Override
     protected void onResume() {
         super.onResume();
+
+        isActivityVisible = true;
+
         String savedLanguage   = LocaleHelper.getPersistedLanguage(this);
         String currentLanguage = getResources().getConfiguration().locale.getLanguage();
         if (!savedLanguage.equals(currentLanguage)) { recreate(); return; }
 
         if (accelerometer != null)
             sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+
+        // ── Hiện dialog nếu có fall bị pending lúc activity không ở foreground ──
+        if (pendingFallMagnitude >= 0 && isFallDetectionEnabled()) {
+            double mag = pendingFallMagnitude;
+            pendingFallMagnitude = -1;
+            // Delay nhỏ để activity kịp resume hoàn toàn trước khi show dialog
+            new Handler(getMainLooper()).postDelayed(() -> showFallCountdownDialog(mag), 300);
+        } else {
+            pendingFallMagnitude = -1; // xoá pending dù tính năng bị tắt
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        isActivityVisible = false;
         sensorManager.unregisterListener(this);
     }
 
@@ -296,16 +317,19 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 int spo2   = intent.getIntExtra(BLEService.EXTRA_SPO2,   -1);
                 int finger = intent.getIntExtra(BLEService.EXTRA_FINGER, -1);
 
-                // Lưu vào cache + push Firebase (chạy ngầm kể cả khi đang ở màn hình khác)
                 if (finger != 0 && bpm > 0) {
                     if (spo2 > 0) dataManager.saveOxygenData(spo2);
                     dataManager.saveHeartRateData(bpm);
-                    pushHealthRecord(bpm, spo2, currentFallState);
+
+                    // FIX: khi tính năng tắt → luôn gửi "no" lên Firebase,
+                    // KHÔNG để currentFallState = "yes" lọt vào health_records
+                    String fallStateToReport = isFallDetectionEnabled() ? currentFallState : "no";
+                    pushHealthRecord(bpm, spo2, fallStateToReport);
                 }
 
             } else if ("com.example.watchapp.FALL_DETECTED".equals(action)) {
                 double magnitude = intent.getDoubleExtra("magnitude", 0);
-                showFallCountdownDialog(magnitude);
+                handleFallDetected(magnitude);
             }
         }
     };
@@ -337,6 +361,15 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     // =========================================================================
+    //  HELPER — trạng thái fall detection
+    // =========================================================================
+
+    private boolean isFallDetectionEnabled() {
+        return getSharedPreferences("WatchSettings", MODE_PRIVATE)
+                .getBoolean("fallDetectionEnabled", true);
+    }
+
+    // =========================================================================
     //  ACCELEROMETER — phát hiện té ngã
     // =========================================================================
 
@@ -354,13 +387,38 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                     currentTime - lastFallDetectionTime > 5000) {
                 lastFallDetectionTime = currentTime;
                 lastMagnitude = acceleration;
-                showFallCountdownDialog(lastMagnitude);
+                // Model vẫn chạy/infer — chỉ chặn output khi tắt
+                handleFallDetected(lastMagnitude);
             }
         }
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+
+    // =========================================================================
+    //  FALL DETECTION — điểm vào duy nhất xử lý fall
+    // =========================================================================
+
+    /**
+     * Điểm vào duy nhất khi phát hiện té ngã (từ accelerometer hoặc BLE broadcast).
+     *
+     * Nếu tính năng BỊ TẮT  → bỏ qua hoàn toàn (không dialog, không Firebase, không email).
+     * Nếu activity VISIBLE   → hiện dialog ngay.
+     * Nếu activity ở nền     → lưu vào pendingFallMagnitude, dialog sẽ hiện khi onResume.
+     */
+    private void handleFallDetected(double magnitude) {
+        // Guard #1: tính năng bị tắt → dừng tại đây
+        if (!isFallDetectionEnabled()) return;
+
+        if (isActivityVisible) {
+            showFallCountdownDialog(magnitude);
+        } else {
+            // Lưu pending, sẽ hiện dialog khi user quay về MainActivity
+            pendingFallMagnitude = magnitude;
+            Log.d(TAG, "Fall detected while activity in background, pending magnitude=" + magnitude);
+        }
+    }
 
     // =========================================================================
     //  FALL DETECTION FLOW
@@ -422,6 +480,10 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     }
 
     private void onFallResponse(boolean isFall, double magnitude) {
+        // Guard #2: defense-in-depth — không xử lý nếu tính năng bị tắt
+        // (trường hợp dialog đã show trước khi user tắt switch)
+        if (!isFallDetectionEnabled()) return;
+
         if (isFall) {
             currentFallState = "yes";
             updateFallStateFirebase("yes", magnitude);
@@ -474,35 +536,24 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
                 .addOnFailureListener(e -> Log.e(TAG, "❌ fall_state FAIL: " + e.getMessage()));
     }
 
-    // HÀM TỰ ĐỘNG XÓA FIREBASE
     private void cleanupOldRecords() {
         healthRecordsRef.orderByKey().limitToLast(200)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
-
                         long total = snapshot.getChildrenCount();
-
-                        // Nếu <=200 thì không làm gì
                         if (total < 200) return;
 
                         int count = 0;
-
                         for (DataSnapshot child : snapshot.getChildren()) {
                             count++;
-
-                            // Xóa 100 record đầu (cũ nhất)
-                            if (count <= 100) {
-                                child.getRef().removeValue();
-                            }
+                            if (count <= 100) child.getRef().removeValue();
                         }
                     }
-
                     @Override
                     public void onCancelled(DatabaseError error) {}
                 });
     }
-
 
     private void pushHealthRecord(int bpm, int spo2, String fallDetection) {
         String timestamp = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
