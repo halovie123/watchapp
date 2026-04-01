@@ -351,7 +351,7 @@ public class BLEService extends Service {
 
         float variance = fallDetectionModel.calculateVariance();
 
-        if (variance < 0.0005f) {
+        if (variance < 1e-9f) {
             Log.d(TAG, "[Fall] Ignored - too static (variance=" + variance + ")");
             return;
         }

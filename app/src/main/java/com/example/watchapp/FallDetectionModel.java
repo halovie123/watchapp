@@ -135,7 +135,11 @@ public class FallDetectionModel {
      */
     public boolean detectFall() {
         float prob = predict();
-        return prob >= FALL_THRESHOLD;
+        boolean isFall = prob >= FALL_THRESHOLD;
+        if (isFall) {
+            clearBuffer(); // chỉ clear buffer, không cooldown
+        }
+        return isFall;
     }
 
     /**
