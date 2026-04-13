@@ -424,8 +424,9 @@ public class BLEService extends Service {
         LocalBroadcastManager.getInstance(this).sendBroadcast(fallIntent);
 
         // System notification (âm thanh + rung)
-        FallNotificationHelper.showFallNotification(this, lastAccelMs2);
-
+        if (isFallDetectionEnabled()) {
+            FallNotificationHelper.showFallNotification(this, lastAccelMs2);
+        }
         // Clear buffer để tránh re-trigger ngay lập tức
         fallDetectionModel.clearBuffer();
         inferenceCounter = 0;
@@ -487,7 +488,9 @@ public class BLEService extends Service {
                 fallIntent.putExtra("probability",   1.0f);
                 fallIntent.putExtra("detectionType", "ESP32_HW");
                 LocalBroadcastManager.getInstance(this).sendBroadcast(fallIntent);
-                FallNotificationHelper.showFallNotification(this, lastAccelMs2);
+                if (isFallDetectionEnabled()) {
+                    FallNotificationHelper.showFallNotification(this, lastAccelMs2);
+                }
             }
         }
 
@@ -672,4 +675,10 @@ public class BLEService extends Service {
     public String  getFallModelStats()    { return fallDetectionModel != null ? fallDetectionModel.getBufferStats() : "N/A"; }
     public float   getLastAccelMs2()      { return lastAccelMs2; }
     public float   getLastAccelG()        { return lastAccelMs2 / G_MS2; }
+
+    // ── Helper: kiểm tra fall detection có đang bật không ─────────────────────
+    private boolean isFallDetectionEnabled() {
+        return getSharedPreferences("WatchSettings", MODE_PRIVATE)
+                .getBoolean("fallDetectionEnabled", true); // mặc định true
+    }
 }
