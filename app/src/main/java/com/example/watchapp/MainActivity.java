@@ -229,9 +229,9 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
     private void setupSensors() {
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        if (accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        }
+//        if (accelerometer != null) {
+//            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+//        }
     }
 
     private void startClock() {
@@ -375,22 +375,22 @@ public class MainActivity extends BaseActivity implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            float x = event.values[0];
-            float y = event.values[1];
-            float z = event.values[2];
-
-            float acceleration = (float) Math.sqrt(x * x + y * y + z * z);
-
-            long currentTime = System.currentTimeMillis();
-            if (acceleration > FALL_THRESHOLD &&
-                    currentTime - lastFallDetectionTime > 5000) {
-                lastFallDetectionTime = currentTime;
-                lastMagnitude = acceleration;
-                // Model vẫn chạy/infer — chỉ chặn output khi tắt
-                handleFallDetected(lastMagnitude);
-            }
-        }
+//        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+//            float x = event.values[0];
+//            float y = event.values[1];
+//            float z = event.values[2];
+//
+//            float acceleration = (float) Math.sqrt(x * x + y * y + z * z);
+//
+//            long currentTime = System.currentTimeMillis();
+//            if (acceleration > FALL_THRESHOLD &&
+//                    currentTime - lastFallDetectionTime > 5000) {
+//                lastFallDetectionTime = currentTime;
+//                lastMagnitude = acceleration;
+//                // Model vẫn chạy/infer — chỉ chặn output khi tắt
+//                handleFallDetected(lastMagnitude);
+//            }
+//        }
     }
 
     @Override
