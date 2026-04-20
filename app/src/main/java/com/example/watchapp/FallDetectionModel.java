@@ -34,7 +34,7 @@ public class FallDetectionModel {
 
     // Model parameters
     private static final int WINDOW_SIZE = 512;
-    private static final float FALL_THRESHOLD = 0.8f; // Probability threshold
+    private static final float FALL_THRESHOLD = 1.2f; // Probability threshold
 
     private Interpreter tflite;
     private List<Float> dataBuffer;

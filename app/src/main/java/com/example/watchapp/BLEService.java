@@ -90,7 +90,7 @@ public class BLEService extends Service {
      *   M:5.0  → 49.1 m/s²
      * Đứng yên ~9.81 m/s² → đặt SPIKE_LOW > 9.81 để tránh false positive khi nghỉ.
      */
-    private static final float SPIKE_LOW_MS2      = 16.0f;  // m/s², dưới đây là bình thường
+    private static final float SPIKE_LOW_MS2      = 21.0f;  // m/s², dưới đây là bình thường
     private static final float SPIKE_HIGH_MS2     = 60.0f;  // m/s², trên đây là va đập quá mạnh
     private static final float G_MS2              = 9.81f;  // hệ số chuyển đổi g → m/s²
 
@@ -101,7 +101,7 @@ public class BLEService extends Service {
      * Cooldown 5 s giữa hai lần cảnh báo.
      * Dùng chung cho cả rule-based spike và model-based detection.
      */
-    private static final long  FALL_ALERT_COOLDOWN_MS = 5_000L;
+    private static final long  FALL_ALERT_COOLDOWN_MS = 15_000L;
 
     // ── GATT state ────────────────────────────────────────────────────────────
     private BluetoothManager bluetoothManager;
@@ -381,9 +381,19 @@ public class BLEService extends Service {
             probIntent.putExtra(EXTRA_FALL_PROBABILITY, probability);
             LocalBroadcastManager.getInstance(this).sendBroadcast(probIntent);
 
+//            if (probability > fallDetectionModel.getFallThreshold() && spikeInBatch) {
+//                fallDetected  = true;
+//                detectionType = "MODEL";
+//            }
             if (probability > fallDetectionModel.getFallThreshold() && spikeInBatch) {
-                fallDetected  = true;
-                detectionType = "MODEL";
+                inferenceCounter++; // tận dụng biến inferenceCounter đã có sẵn
+                if (inferenceCounter >= 2) { // phải báo dương 2 lần liên tiếp
+                    fallDetected  = true;
+                    detectionType = "MODEL";
+                    inferenceCounter = 0;
+                }
+            } else {
+                inferenceCounter = 0; // reset nếu có 1 frame âm tính
             }
         }
 
